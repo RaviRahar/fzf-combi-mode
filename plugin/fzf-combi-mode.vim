@@ -9,4 +9,4 @@ if exists("g:loaded_fzf_combi_mode")
 endif
 let g:loaded_fzf_combi_mode = 1
 
-command! -nargs=* FzfCombiMode lua require('fzf_combi_mode').load_command(<f-args>)
+command! -nargs=* FzfCombiMode lua require('fzf-combi-mode').load_command(<f-args>)

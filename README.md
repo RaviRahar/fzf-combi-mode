@@ -1,13 +1,15 @@
 ### Fzf Combi Mode
 
-This plugin provides combi mode for **FzfLua**. It just combines different
-already existing modes and a new dir mode, so they work coherently.
+![fzf-combi-mode-gif](https://raw.githubusercontent.com/wiki/RaviRahar/fzf-combi-mode/fzf-combi-mode.gif)
+
+This plugin provides combi mode for [**FzfLua**](https://github.com/ibhagwan/fzf-lua). It just combines different
+already existing modes and a new dir mode, making them work coherently.
 
 - Combi mode combines 3 modes together:
 
-  - mode_grep: live_grep_native (default)
-  - mode_files: files (default)
-  - mode_dir: dir (custom)
+  - dir: dir (custom)
+  - grep: live_grep_native (default)
+  - files: files (default)
 
 ### Install
 
@@ -27,9 +29,6 @@ use { "RaviRahar/fzf-combi-mode",
     {"ibhagwan/fzf-lua"},
     { "junegunn/fzf", run = "./install --bin" },
   }
-  config = function()
-    require("fzf-lua").setup({})
-  end
 }
 
 ```
@@ -43,43 +42,57 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim)
     {"ibhagwan/fzf-lua"},
     { "junegunn/fzf", run = "./install --bin" },
   }
-  config = function()
-    require("fzf-lua").setup({})
-  end
 }
 ```
 
 ### Quick-Start
 
 ```vim
-:FzfCombiMode resume=true mode=mode_dir
+:FzfCombiMode resume=true mode=dir
 ```
 
 or
 
 ```lua
 local opts = { noremap = true, silent = true }
-vim.keymap.set("n", "<leadel>ff", function() require("fzf_combi_mode").mode_combi({ resume = true, mode = "mode_files" }) end, opts)
+vim.keymap.set("n", "<leader>ff", ":FzfCombiMode resume=true<CR>", opts)
+-- or
+-- vim.keymap.set("n", "<leader>ff", function() require("fzf-combi-mode").mode_combi() end, opts)
 ```
 
 Some default keybindings:
 
-- <C-f> : cycle between modes
-- <BS> : Act as normal backspace, if query is empty then go back in path
+- \<C-f\> : cycle between modes
+- \<BS\> : Act as normal backspace, but if query is empty then go back in path
 
 ### Configuration
 
-For now there is no setup function. One will be added later. For now:
+```lua
+-- These are defualts
+-- Only provide settings you want to change
+require("fzf-combi-mode").setup({
+    default = "files",
+    resume = true,
+    keys = {
+        grep_key = "ctrl-g",
+        dir_key = "ctrl-i",
+        files_key = "ctrl-b",
+        cycle_key = "ctrl-f",
+        parent_dir_key = "ctrl-h",
+    }
+})
+```
+
+- You can make two keybindings, one that always opens in current dir and another
+  that resumes from where you left off. Both will work independently, i.e., state
+  for keybinding with resume=false will not be saved
 
 ```lua
-local fzf_lua_combi = require("fzf_combi_mode")
-
-fzf_lua_combi.grep_key = "ctrl-g"
-fzf_lua_combi.dir_key = "ctrl-i"
-fzf_lua_combi.files_key = "ctrl-b"
-fzf_lua_combi.cycle_key = "ctrl-f"
-fzf_lua_combi.parent_dir_key = "ctrl-h"
-
 local opts = { noremap = true, silent = true }
-vim.keymap.set("n", "<leadel>ff", function() fzf_lua_combi.mode_combi({ resume = true, mode = "mode_files" }) end, opts)
+-- keybinding that resumes
+vim.keymap.set("n", "<leader>ff", function() require("fzf-combi-mode").mode_combi({ mode = "files" }) end, opts)
+-- keybinding that do not resume
+-- <leader>fh as in fzf_files here (in cwd), since it will not resume and will always open in cwd
+vim.keymap.set("n", "<leader>fh", function() require("fzf-combi-mode").mode_combi({ resume = false, mode = "files" }) end, opts)
+vim.keymap.set("n", "<leader>fg", function() require("fzf-combi-mode").mode_combi({ resume = false, mode = "grep" }) end, opts)
 ```

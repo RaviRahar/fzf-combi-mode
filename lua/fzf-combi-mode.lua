@@ -2,9 +2,9 @@
 --
 -- traverse to parent directory with "backspace", "ctrl-h" (in all modes)
 --
--- switch to "mode_files" with files_key (current directory of fzf)
--- switch to "mode_grep" with dir_key (current directory of dir)
--- switch to "mode_dir" with grep_key, (current directory of fzf)
+-- switch to files mode with files_key (current directory of fzf)
+-- switch to grep mode with dir_key (current directory of dir)
+-- switch to dir mode with grep_key, (current directory of fzf)
 -- cycle between modes with cycle_key (current directory of fzf)
 --
 -- dir_mode: fuzzy find among directories, <CR> to go inside
@@ -22,11 +22,10 @@ end
 --
 local M = {}
 
-M.grep_key = "ctrl-g"
-M.dir_key = "ctrl-i"
-M.files_key = "ctrl-b"
-M.cycle_key = "ctrl-f"
-M.parent_dir_key = "ctrl-h"
+-- used to check if plugin is resuming
+M._resuming = false
+M._setup_done = false
+M._resume_data = {}
 
 M.cmd_get_dir = function(opts)
     local command = nil
@@ -45,6 +44,7 @@ end
 M.edit_prompt_dir_mode = function(prompt)
     -- prefix all mode_dir prompts with Dir:
     prompt = fzf_lua.path.HOME_to_tilde(prompt)
+    prompt = fzf_lua.path.shorten(prompt)
     return prompt:match("^%Dir: ") and prompt or "Dir: " .. prompt
 end
 
@@ -52,8 +52,11 @@ M.mode_files = function(opts)
     opts = opts or {}
     opts.cwd = opts.cwd or vim.uv.cwd()
     opts.fn_transform = nil
-    opts.last_mode = "mode_files"
-    fzf_lua.config.__resume_data = opts
+    if opts.resume == true then
+        M._resuming = true
+        opts.last_mode = "files"
+        M._resume_data = opts
+    end
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
             local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -79,8 +82,11 @@ M.mode_grep = function(opts)
     opts.cwd = opts.cwd or vim.uv.cwd()
     opts.exec_empty_query = true
     opts.fn_transform = nil
-    opts.last_mode = "mode_grep"
-    fzf_lua.config.__resume_data = opts
+    if opts.resume == true then
+        M._resuming = true
+        opts.last_mode = "grep"
+        M._resume_data = opts
+    end
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
             local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -94,6 +100,7 @@ M.mode_grep = function(opts)
                 M.mode_grep(opts)
             end
         end, field_index = false },
+        ['return'] = fzf_lua.actions.file_edit_or_qf,
         [M.dir_key] = { fn = function() M.mode_dir(opts) end, exec_silent = true, field_index = false },
         [M.files_key] = { fn = function() M.mode_files(opts) end, exec_silent = true, field_index = false },
         [M.cycle_key] = { fn = function() M.mode_dir(opts) end, exec_silent = true, field_index = false },
@@ -108,8 +115,11 @@ M.mode_dir = function(opts)
     -- end
     opts.prompt = M.edit_prompt_dir_mode(opts.cwd)
     opts.dir_empty = false
-    opts.last_mode = "mode_dir"
-    fzf_lua.config.__resume_data = opts
+    if opts.resume == true then
+        M._resuming = true
+        opts.last_mode = "dir"
+        M._resume_data = opts
+    end
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
             local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -158,21 +168,53 @@ M.mode_dir = function(opts)
     end
 end
 
-M.mode_combi = function(func_opts)
-    local opts = func_opts or {}
-    opts.last_mode = opts.mode
-    if opts.resume then
-        opts.last_mode = fzf_lua.config.__resume_data.last_mode or opts.mode
-        opts = fzf_lua.config.__resume_data or opts
+M.mode_combi = function(opts)
+    if not M._setup_done then
+        M.setup()
     end
+    opts = opts or {}
+    -- for backspace functionality on empty query
     opts.keymap = { fzf = { ["backward-eof"] = "accept" } }
-    if opts.last_mode == "mode_dir" then
+
+    if opts.mode == nil then
+        opts.last_mode = M.default
+    else
+        opts.last_mode = opts.mode
+    end
+
+    if opts.resume == nil then
+        opts.resume = M.resume
+    end
+
+    if opts.resume and M._resuming then
+        opts = M._resume_data
+    end
+
+    if opts.last_mode == "files" then
+        M.mode_files(opts)
+    elseif opts.last_mode == "dir" then
         M.mode_dir(opts)
-    elseif opts.last_mode == "mode_grep" then
+    elseif opts.last_mode == "grep" then
         M.mode_grep(opts)
     else
-        M.mode_files(opts)
+        print(string.format("fzf-combi-mode: mode %s does not exist", opts.last_mode))
     end
+end
+
+M.setup = function(opts)
+    opts = opts or {}
+
+    M.resume = opts.resume or true
+    M.default = opts.default or "files"
+
+    local keys = opts.keys or {}
+    M.grep_key = keys.grep_key or "ctrl-g"
+    M.dir_key = keys.dir_key or "ctrl-i"
+    M.files_key = keys.files_key or "ctrl-b"
+    M.cycle_key = keys.cycle_key or "ctrl-f"
+    M.parent_dir_key = keys.parent_dir_key or "ctrl-h"
+
+    M._setup_done = true
 end
 
 function M.load_command(...)
@@ -187,7 +229,11 @@ function M.load_command(...)
 
     local opts = {}
     if user_opts.resume then
-        opts.resume = user_opts.resume
+        if user_opts.resume:lower() == "true" then
+            opts.resume = true
+        elseif user_opts.resume:lower() == "false" then
+            opts.resume = false
+        end
     end
     if user_opts.mode then
         opts.mode = user_opts.mode
