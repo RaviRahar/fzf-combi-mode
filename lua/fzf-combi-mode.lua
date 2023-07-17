@@ -21,11 +21,33 @@ end
 --
 --
 local M = {}
+-- defaults are stored here
+M.defaults = {
+    -- used to check if plugin is resuming
+    _is_resuming = false,
+    _setup_done = false,
+    _resume_data = {},
 
--- used to check if plugin is resuming
-M._resuming = false
-M._setup_done = false
-M._resume_data = {}
+    resume = true,
+    default = "files",
+
+    grep_key = "ctrl-g",
+    dir_key = "ctrl-i",
+    files_key = "ctrl-k",
+    cycle_key = "ctrl-f",
+    parent_dir_key = "ctrl-h",
+    dir_keys = {},
+    grep_keys = {},
+    files_keys = {},
+}
+-- user keys will be store in this table, check setup() function
+M.userset = {}
+-- first check in userset if setting found
+-- __newmethod allows values in defaults values to be changed directly
+-- For ex: instead of M.defaults.resume=false we can use M.resume=false=false
+setmetatable(M, { __index = M.userset, __newindex = M.defaults })
+-- if not then check in defaults
+setmetatable(M.userset, { __index = M.defaults })
 
 M.cmd_get_dir = function(opts)
     local command = nil
@@ -53,7 +75,7 @@ M.mode_files = function(opts)
     opts.cwd = opts.cwd or vim.uv.cwd()
     opts.fn_transform = nil
     if opts.resume == true then
-        M._resuming = true
+        M._is_resuming = true
         opts.last_mode = "files"
         M._resume_data = opts
     end
@@ -83,7 +105,7 @@ M.mode_grep = function(opts)
     opts.exec_empty_query = true
     opts.fn_transform = nil
     if opts.resume == true then
-        M._resuming = true
+        M._is_resuming = true
         opts.last_mode = "grep"
         M._resume_data = opts
     end
@@ -116,7 +138,7 @@ M.mode_dir = function(opts)
     opts.prompt = M.edit_prompt_dir_mode(opts.cwd)
     opts.dir_empty = false
     if opts.resume == true then
-        M._resuming = true
+        M._is_resuming = true
         opts.last_mode = "dir"
         M._resume_data = opts
     end
@@ -186,7 +208,7 @@ M.mode_combi = function(opts)
         opts.resume = M.resume
     end
 
-    if opts.resume and M._resuming then
+    if opts.resume and M._is_resuming then
         opts = M._resume_data
     end
 
@@ -202,18 +224,7 @@ M.mode_combi = function(opts)
 end
 
 M.setup = function(opts)
-    opts = opts or {}
-
-    M.resume = opts.resume or true
-    M.default = opts.default or "files"
-
-    local keys = opts.keys or {}
-    M.grep_key = keys.grep_key or "ctrl-g"
-    M.dir_key = keys.dir_key or "ctrl-i"
-    M.files_key = keys.files_key or "ctrl-b"
-    M.cycle_key = keys.cycle_key or "ctrl-f"
-    M.parent_dir_key = keys.parent_dir_key or "ctrl-h"
-
+    M.userset = opts or {}
     M._setup_done = true
 end
 
