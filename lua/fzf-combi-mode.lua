@@ -42,6 +42,29 @@ M.defaults = {
 }
 -- user keys will be store in this table, check setup() function
 M.userset = {}
+-- TODO:
+-- Extend Dir Mode:
+--  dir:
+--      Toggle:
+--          Hidden: ctrl-z
+--          Files: ctrl-y
+--          Cycle between both modes: ctrl-t
+-- File Operations
+--  dir
+--     New: ctrl-n
+--     Rename: ctrl-r
+--     Select (Toggle): ctrl-s
+--         Move: ctrl-m
+--         Copy: ctrl-c
+--         Delete: ctrl-d
+--     Clear All Selections: ctrl-shift-s
+-- Bookmark Directories and files:
+--     dir:
+--         Bookmark(Toggle): ctrl-b
+--         Clear All Bookmarks : ctrl-shift-b
+--     files,grep:
+--         Search in bookmarked: ctrl-b
+
 -- first check in userset if setting found
 -- __newmethod allows values in defaults values to be changed directly
 -- For ex: instead of M.defaults.resume=false we can use M.resume=false=false
