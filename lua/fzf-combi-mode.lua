@@ -36,9 +36,27 @@ M.defaults = {
     files_key = "ctrl-k",
     cycle_key = "ctrl-f",
     parent_dir_key = "ctrl-h",
-    dir_keys = {},
-    grep_keys = {},
-    files_keys = {},
+    dir_keys = {
+        toggle_hidden_key = "ctrl-z",
+        toggle_files_key = "ctrl-y",
+        toggle_cycle_key = "ctrl-t",
+        new_file_key = "ctrl-n",
+        new_dir_key = "ctrl-d",
+        rename_key = "ctrl-r",
+        select_key = "ctrl-s",
+        move_key = "ctrl-m",
+        copy_key = "ctrl-c",
+        delete_key = "ctrl-x",
+        clear_selection_key = "ctrl-a",
+        toggle_bookmark = "ctrl-b",
+        clear_bookmarks_key = "ctrl-v",
+    },
+    grep_keys = {
+        search_in_bookmarks_key = "ctrl-b",
+    },
+    files_keys = {
+        search_in_bookmarks_key = "ctrl-b",
+    },
 }
 -- user keys will be store in this table, check setup() function
 M.userset = {}
@@ -86,17 +104,57 @@ M.cmd_get_dir = function(opts)
     return command
 end
 
-M.edit_prompt_dir_mode = function(prompt)
+M.cmd_get_num_files = function(cwd, just_dirs)
+    just_dirs = (just_dirs ~= nil) and just_dirs or false
+    local cmd_num_files
+    if just_dirs then
+        cmd_num_files = string.format("find -L %s -maxdepth 1 -mindepth 1 -type d | wc -l", cwd)
+    else
+        cmd_num_files = string.format("find -L %s -maxdepth 1 -mindepth 1 | wc -l", cwd)
+    end
+    local num_files = tonumber(vim.fn.system(cmd_num_files))
+    if num_files == nil then num_files = 0 end
+    return num_files
+end
+
+M.set_legend = function(opts, legend)
+    opts = type(opts) == "table" and opts or {}
+    opts.fzf_opts = type(opts.fzf_opts) == "table" and opts.fzf_opts or {}
+    opts.fzf_opts["--header"] = vim.fn.shellescape(string.format(":: %s", legend))
+    return opts
+end
+
+M.remove_legend = function(opts)
+    opts = type(opts) == "table" and opts or {}
+    opts.fzf_opts = type(opts.fzf_opts) == "table" and opts.fzf_opts or {}
+    opts.fzf_opts["--header"] = nil
+    return opts
+end
+
+M.edit_prompt_dir_mode = function(prompt, mode)
     -- prefix all mode_dir prompts with Dir:
     prompt = fzf_lua.path.HOME_to_tilde(prompt)
-    prompt = fzf_lua.path.shorten(prompt)
-    return prompt:match("^%Dir: ") and prompt or "Dir: " .. prompt
+    if (#prompt >= 32) then
+        prompt = fzf_lua.path.shorten(prompt)
+    end
+    if mode == "browser" then
+        prompt = prompt:match("^%Browser: ") and prompt or "Browser: " .. prompt
+    elseif mode == "files" then
+        prompt = prompt:match("^%Files: ") and prompt or "Files: " .. prompt
+    elseif mode == "creation" then
+        prompt = prompt:match("^%New: ") and prompt or "New: " .. prompt
+    elseif mode == "grep" then
+        prompt = prompt:match("^%Regex: ") and prompt or "Regex: " .. prompt
+    end
+    prompt = prompt .. " > "
+    return prompt
 end
 
 M.mode_files = function(opts)
-    opts = opts or {}
+    opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.uv.cwd()
     opts.fn_transform = nil
+    opts = M.remove_legend(opts)
     if opts.resume == true then
         M._is_resuming = true
         opts.last_mode = "files"
@@ -116,17 +174,18 @@ M.mode_files = function(opts)
             end
         end, field_index = false },
         ['return'] = fzf_lua.actions.file_edit_or_qf,
-        [M.dir_key] = { fn = function() M.mode_dir(opts) end, exec_silent = true, field_index = false },
+        [M.dir_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
         [M.grep_key] = { fn = function() M.mode_grep(opts) end, exec_silent = true, field_index = false },
         [M.cycle_key] = { fn = function() M.mode_grep(opts) end, exec_silent = true, field_index = false },
     }
     fzf_lua.files(opts)
 end
 M.mode_grep = function(opts)
-    opts = opts or {}
+    opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.uv.cwd()
     opts.exec_empty_query = true
     opts.fn_transform = nil
+    opts = M.remove_legend(opts)
     if opts.resume == true then
         M._is_resuming = true
         opts.last_mode = "grep"
@@ -146,20 +205,63 @@ M.mode_grep = function(opts)
             end
         end, field_index = false },
         ['return'] = fzf_lua.actions.file_edit_or_qf,
-        [M.dir_key] = { fn = function() M.mode_dir(opts) end, exec_silent = true, field_index = false },
+        [M.dir_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
         [M.files_key] = { fn = function() M.mode_files(opts) end, exec_silent = true, field_index = false },
-        [M.cycle_key] = { fn = function() M.mode_dir(opts) end, exec_silent = true, field_index = false },
+        [M.cycle_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
     }
     fzf_lua.live_grep_native(opts)
 end
-M.mode_dir = function(opts)
-    opts = opts or {}
+
+M.mode_creation = function(opts)
+    opts = type(opts) == "table" and opts or {}
+    opts.cwd = opts.cwd or vim.uv.cwd()
+    opts.prompt = M.edit_prompt_dir_mode(opts.cwd, "creation")
+    opts.is_creation_dir = (opts.is_creation_dir ~= nil) and opts.is_creation_dir or false
+    opts.actions = {
+        [M.parent_dir_key] = { fn = function()
+            local parent_dir_path = fzf_lua.path.parent(opts.cwd)
+            opts.cwd = parent_dir_path
+            M.mode_creation(opts)
+        end, exec_silent = true, field_index = false },
+        ['default'] = { fn = function()
+            opts.is_creation_dir = nil
+            M.mode_browser(opts)
+        end, field_index = false },
+        ['return'] = { fn = function()
+            local new_entity_name = fzf_lua.get_last_query()
+
+            if new_entity_name ~= nil then
+                if opts.is_creation_dir then
+                    os.execute(string.format("mkdir -p %s", fzf_lua.path.join({ opts.cwd, new_entity_name })))
+                else
+                    os.execute(string.format(">> %s", fzf_lua.path.join({ opts.cwd, new_entity_name })))
+                end
+                opts.is_creation_dir = nil
+                M.mode_browser(opts)
+            else
+                M.mode_creation(opts)
+            end
+        end, field_index = true },
+    }
+
+    if opts.is_creation_dir then
+        opts = M.set_legend(opts, "Enter Directory Name. Then Press Enter. Backspace to go to Browser.")
+        fzf_lua.fzf_exec({}, opts)
+    else
+        opts = M.set_legend(opts, "Enter File Name. Then Press Enter. Backspace to go to Browser.")
+        fzf_lua.fzf_exec({}, opts)
+    end
+end
+
+M.mode_browser = function(opts)
+    opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.uv.cwd()
     -- opts.fn_transform = function(file_name)
     --     return fzf_lua.make_entry.file(file_name, { file_icons = true, color_icons = true })
     -- end
-    opts.prompt = M.edit_prompt_dir_mode(opts.cwd)
+    opts.prompt = M.edit_prompt_dir_mode(opts.cwd, "browser")
     opts.dir_empty = false
+    opts = M.remove_legend(opts)
     if opts.resume == true then
         M._is_resuming = true
         opts.last_mode = "dir"
@@ -169,13 +271,13 @@ M.mode_dir = function(opts)
         [M.parent_dir_key] = { fn = function()
             local parent_dir_path = fzf_lua.path.parent(opts.cwd)
             opts.cwd = parent_dir_path
-            M.mode_dir(opts)
+            M.mode_browser(opts)
         end, exec_silent = true, field_index = false },
         ['default'] = { fn = function()
             if #fzf_lua.get_last_query() == 0 then
                 local parent_dir_path = fzf_lua.path.parent(opts.cwd)
                 opts.cwd = parent_dir_path
-                M.mode_dir(opts)
+                M.mode_browser(opts)
             end
         end, field_index = false },
         ['return'] = { fn = function(selected)
@@ -188,7 +290,7 @@ M.mode_dir = function(opts)
                 local next_dir_path = fzf_lua.path.join({ opts.cwd, cur_dir_path })
                 opts.cwd = next_dir_path
             end
-            M.mode_dir(opts)
+            M.mode_browser(opts)
         end, exec_silent = true },
         [M.files_key] = { fn = function()
             opts.prompt = nil
@@ -202,10 +304,19 @@ M.mode_dir = function(opts)
             opts.prompt = nil
             M.mode_files(opts)
         end, exec_silent = true, field_index = false },
+        [M.dir_keys.new_file_key] = { fn = function()
+            print("files")
+            opts.is_creation_dir = false
+            M.mode_creation(opts)
+        end, exec_silent = true, field_index = false },
+        [M.dir_keys.new_dir_key] = { fn = function()
+            print("dir")
+            opts.is_creation_dir = true
+            M.mode_creation(opts)
+        end, exec_silent = true, field_index = false },
     }
-    local cmd_num_files = string.format("find -L %s -maxdepth 1 -mindepth 1 -type d | wc -l", opts.cwd)
-    local num_files = tonumber(vim.fn.system(cmd_num_files))
-    if num_files and num_files > 0 then
+
+    if M.cmd_get_num_files(opts.cwd, true) > 0 then
         fzf_lua.fzf_exec(M.cmd_get_dir(opts), opts)
     else
         opts.dir_empty = true
@@ -217,7 +328,9 @@ M.mode_combi = function(opts)
     if not M._setup_done then
         M.setup()
     end
-    opts = opts or {}
+
+    opts = type(opts) == "table" and opts or {}
+
     -- for backspace functionality on empty query
     opts.keymap = { fzf = { ["backward-eof"] = "accept" } }
 
@@ -233,12 +346,14 @@ M.mode_combi = function(opts)
 
     if opts.resume and M._is_resuming then
         opts = M._resume_data
+    else
+        opts = vim.tbl_deep_extend("keep", opts, fzf_lua.config.globals)
     end
 
     if opts.last_mode == "files" then
         M.mode_files(opts)
     elseif opts.last_mode == "dir" then
-        M.mode_dir(opts)
+        M.mode_browser(opts)
     elseif opts.last_mode == "grep" then
         M.mode_grep(opts)
     else
