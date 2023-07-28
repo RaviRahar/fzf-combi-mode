@@ -40,8 +40,8 @@ M.defaults = {
         toggle_hidden_key = "ctrl-z",
         toggle_files_key = "ctrl-y",
         toggle_cycle_key = "ctrl-t",
-        new_file_key = "ctrl-n",
-        new_dir_key = "ctrl-d",
+        new_file_key = "ctrl-e",
+        new_dir_key = "ctrl-w",
         rename_key = "ctrl-r",
         select_key = "ctrl-s",
         move_key = "ctrl-m",
@@ -60,6 +60,8 @@ M.defaults = {
 }
 -- user keys will be store in this table, check setup() function
 M.userset = {}
+-- used to override useropts by directly accessing through combi-mode
+M.userset_override = {}
 -- TODO:
 -- Extend Dir Mode:
 --  dir:
@@ -160,6 +162,7 @@ M.mode_files = function(opts)
         opts.last_mode = "files"
         M._resume_data = opts
     end
+    opts.mode_previous = M.mode_files
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
             local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -177,6 +180,14 @@ M.mode_files = function(opts)
         [M.dir_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
         [M.grep_key] = { fn = function() M.mode_grep(opts) end, exec_silent = true, field_index = false },
         [M.cycle_key] = { fn = function() M.mode_grep(opts) end, exec_silent = true, field_index = false },
+        [M.dir_keys.new_file_key] = { fn = function()
+            opts.is_creation_dir = false
+            M.mode_creation(opts)
+        end, exec_silent = true, field_index = false },
+        [M.dir_keys.new_dir_key] = { fn = function()
+            opts.is_creation_dir = true
+            M.mode_creation(opts)
+        end, exec_silent = true, field_index = false },
     }
     fzf_lua.files(opts)
 end
@@ -191,6 +202,7 @@ M.mode_grep = function(opts)
         opts.last_mode = "grep"
         M._resume_data = opts
     end
+    opts.mode_previous = M.mode_grep
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
             local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -225,7 +237,7 @@ M.mode_creation = function(opts)
         end, exec_silent = true, field_index = false },
         ['default'] = { fn = function()
             opts.is_creation_dir = nil
-            M.mode_browser(opts)
+            opts.mode_previous(opts)
         end, field_index = false },
         ['return'] = { fn = function()
             local new_entity_name = fzf_lua.get_last_query()
@@ -237,7 +249,7 @@ M.mode_creation = function(opts)
                     os.execute(string.format(">> %s", fzf_lua.path.join({ opts.cwd, new_entity_name })))
                 end
                 opts.is_creation_dir = nil
-                M.mode_browser(opts)
+                opts.mode_previous(opts)
             else
                 M.mode_creation(opts)
             end
@@ -267,6 +279,7 @@ M.mode_browser = function(opts)
         opts.last_mode = "dir"
         M._resume_data = opts
     end
+    opts.mode_previous = M.mode_browser
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
             local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -305,12 +318,10 @@ M.mode_browser = function(opts)
             M.mode_files(opts)
         end, exec_silent = true, field_index = false },
         [M.dir_keys.new_file_key] = { fn = function()
-            print("files")
             opts.is_creation_dir = false
             M.mode_creation(opts)
         end, exec_silent = true, field_index = false },
         [M.dir_keys.new_dir_key] = { fn = function()
-            print("dir")
             opts.is_creation_dir = true
             M.mode_creation(opts)
         end, exec_silent = true, field_index = false },
@@ -346,23 +357,30 @@ M.mode_combi = function(opts)
 
     if opts.resume and M._is_resuming then
         opts = M._resume_data
-    else
-        opts = vim.tbl_deep_extend("keep", opts, fzf_lua.config.globals)
     end
 
+    M.userset_override = opts
+    -- override options by directly accessing through combi-mode
+    setmetatable(M.userset_override, { __index = fzf_lua.config.globals })
     if opts.last_mode == "files" then
-        M.mode_files(opts)
+        M.mode_files(M.userset_override)
     elseif opts.last_mode == "dir" then
-        M.mode_browser(opts)
+        M.mode_browser(M.userset_override)
     elseif opts.last_mode == "grep" then
-        M.mode_grep(opts)
+        M.mode_grep(M.userset_override)
     else
-        print(string.format("fzf-combi-mode: mode %s does not exist", opts.last_mode))
+        print(string.format("fzf-combi-mode: mode %s does not exist", M.userset_override.last_mode))
     end
 end
 
 M.setup = function(opts)
-    M.userset = opts or {}
+    M.userset = type(opts) == "table" and opts or {}
+    -- first check in userset if setting found
+    -- __newmethod allows values in defaults values to be changed directly
+    -- For ex: instead of M.defaults.resume=false we can use M.resume=false=false
+    setmetatable(M, { __index = M.userset, __newindex = M.defaults })
+    -- if not then check in defaults
+    setmetatable(M.userset, { __index = M.defaults })
     M._setup_done = true
 end
 
