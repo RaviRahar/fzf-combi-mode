@@ -29,7 +29,7 @@ M.defaults = {
     _resume_data = {},
 
     resume = true,
-    default = "files",
+    default = "browser",
 
     grep_key = "ctrl-g",
     dir_key = "ctrl-i",
@@ -85,34 +85,57 @@ M.userset_override = {}
 --     files,grep:
 --         Search in bookmarked: ctrl-b
 
--- first check in userset if setting found
--- __newmethod allows values in defaults values to be changed directly
--- For ex: instead of M.defaults.resume=false we can use M.resume=false=false
-setmetatable(M, { __index = M.userset, __newindex = M.defaults })
--- if not then check in defaults
-setmetatable(M.userset, { __index = M.defaults })
-
-M.cmd_get_dir = function(opts)
+M.cmd_get_files_and_dir = function(opts)
+    opts.include_files = (opts.include_files ~= nil) and opts.include_files or false
+    opts.include_hidden = (opts.include_hidden ~= nil) and opts.include_hidden or false
     local command = nil
     if vim.fn.executable("fd") == 1 then
-        command = string.format("fd --type d --max-depth 1", opts.fd_opts)
+        if opts.include_files and opts.include_hidden then
+            command = string.format("fd --hidden --max-depth 1 --min-depth 1 --no-ignore", opts.fd_opts)
+        elseif not opts.include_hidden and opts.include_files then
+            command = string.format("fd --max-depth 1 --min-depth 1 --no-ignore", opts.fd_opts)
+        elseif opts.include_hidden and not opts.include_files then
+            command = string.format("fd --hidden --type d --max-depth 1 --min-depth 1 --no-ignore", opts.fd_opts)
+        else
+            command = string.format("fd --type d --max-depth 1 --min-depth 1 --no-ignore", opts.fd_opts)
+        end
     else
         if opts.find_global_opts == nil then opts.find_global_opts = "" end
         if opts.find_positional_opts == nil then opts.find_positional_opts = "" end
-        command = string.format("find -L . -maxdepth 1 -mindepth 1 -type d -printf '%s\n'", "%P",
-            opts.find_global_opts,
-            opts.find_positional_opts)
+
+        if opts.include_files and opts.include_hidden then
+            command = string.format(
+                [[find -L %s -maxdepth 1 -mindepth 1 \( -type d -printf '%s/\n' , ! -type d -printf '%s\n' \)]],
+                opts.cwd, "%P", "%P", opts.find_global_opts, opts.find_positional_opts)
+        elseif opts.include_files and not opts.include_hidden then
+            command = string.format(
+                [[find -L %s -maxdepth 1 -mindepth 1 \( ! -regex '.*/\.[^/]*' \) \( -type d -printf '%s/\n' , ! -type d -printf '%s\n' \)]],
+                opts.cwd, "%P", "%P", opts.find_global_opts, opts.find_positional_opts)
+        elseif not opts.include_files and opts.include_hidden then
+            command = string.format([[find -L %s -maxdepth 1 -mindepth 1 -type d -printf '%s/\n']], opts.cwd, "%P",
+                opts.find_global_opts, opts.find_positional_opts)
+        else
+            command = string.format(
+                [[find -L %s -maxdepth 1 -mindepth 1 -type d \( ! -regex '.*/\.[^/]*' \) -printf '%s/\n']],
+                opts.cwd, "%P", opts.find_global_opts, opts.find_positional_opts)
+        end
     end
     return command
 end
 
-M.cmd_get_num_files = function(cwd, just_dirs)
-    just_dirs = (just_dirs ~= nil) and just_dirs or false
+M.cmd_get_num_files = function(opts)
+    opts.include_files = (opts.include_files ~= nil) and opts.include_files or false
+    opts.include_hidden = (opts.include_hidden ~= nil) and opts.include_hidden or false
     local cmd_num_files
-    if just_dirs then
-        cmd_num_files = string.format("find -L %s -maxdepth 1 -mindepth 1 -type d | wc -l", cwd)
+    if opts.include_files and opts.include_hidden then
+        cmd_num_files = string.format([[find -L %s -maxdepth 1 -mindepth 1 | wc -l]], opts.cwd)
+    elseif opts.include_files and not opts.include_hidden then
+        cmd_num_files = string.format([[find -L %s -maxdepth 1 -mindepth 1 -not -path \'*/.*\' | wc -l]], opts.cwd)
+    elseif not opts.include_files and opts.include_hidden then
+        cmd_num_files = string.format([[find -L %s -maxdepth 1 -mindepth 1 -type d | wc -l]], opts.cwd)
     else
-        cmd_num_files = string.format("find -L %s -maxdepth 1 -mindepth 1 | wc -l", cwd)
+        cmd_num_files = string.format([[find -L %s -maxdepth 1 -mindepth 1 -type d -not -path \'*/.*\' | wc -l]],
+            opts.cwd)
     end
     local num_files = tonumber(vim.fn.system(cmd_num_files))
     if num_files == nil then num_files = 0 end
@@ -276,9 +299,19 @@ M.mode_browser = function(opts)
     opts = M.remove_legend(opts)
     if opts.resume == true then
         M._is_resuming = true
-        opts.last_mode = "dir"
+        opts.last_mode = "browser"
         M._resume_data = opts
     end
+    opts.include_hidden = (function() if (opts.include_hidden ~= nil) then return opts.include_hidden else return false end end)()
+    opts.include_files = (function() if (opts.include_files ~= nil) then return opts.include_files else return true end end)()
+    local file_hidden_prompt = "Showing Directories"
+    if opts.include_files then
+        file_hidden_prompt = file_hidden_prompt .. " :: Showing Files"
+    end
+    if opts.include_hidden then
+        file_hidden_prompt = file_hidden_prompt .. " :: Showing Hidden"
+    end
+    opts = M.set_legend(opts, file_hidden_prompt)
     opts.mode_previous = M.mode_browser
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
@@ -293,18 +326,46 @@ M.mode_browser = function(opts)
                 M.mode_browser(opts)
             end
         end, field_index = false },
-        ['return'] = { fn = function(selected)
+        [M.dir_keys.toggle_hidden_key] = { fn = function()
+            opts.include_hidden = not opts.include_hidden
+            M.mode_browser(opts)
+        end, exec_silent = true, field_index = false },
+        [M.dir_keys.toggle_files_key] = { fn = function()
+            opts.include_files = not opts.include_files
+            M.mode_browser(opts)
+        end, exec_silent = true, field_index = false },
+        [M.dir_keys.toggle_cycle_key] = { fn = function()
+            if opts.include_hidden and opts.include_files then
+                opts.include_hidden = false
+                opts.include_files = false
+                M.mode_browser(opts)
+            elseif opts.include_hidden or opts.include_files then
+                opts.include_hidden = true
+                opts.include_files = true
+                M.mode_browser(opts)
+            else
+                opts.include_hidden = false
+                opts.include_files = true
+                M.mode_browser(opts)
+            end
+        end, exec_silent = true, field_index = false },
+        ['return'] = function(selected)
             local selected_query = selected[1]
             if opts.dir_empty then
                 local parent_dir_path = fzf_lua.path.parent(opts.cwd)
                 opts.cwd = parent_dir_path
+                M.mode_browser(opts)
             else
-                local cur_dir_path = fzf_lua.path.entry_to_file(selected_query).path
-                local next_dir_path = fzf_lua.path.join({ opts.cwd, cur_dir_path })
-                opts.cwd = next_dir_path
+                local cur_path = fzf_lua.path.entry_to_file(selected_query).path
+                local next_path = fzf_lua.path.join({ opts.cwd, cur_path })
+                if (vim.fn.isdirectory(next_path) == 0) then
+                    fzf_lua.actions.file_edit_or_qf(selected, opts)
+                else
+                    opts.cwd = next_path
+                    M.mode_browser(opts)
+                end
             end
-            M.mode_browser(opts)
-        end, exec_silent = true },
+        end,
         [M.files_key] = { fn = function()
             opts.prompt = nil
             M.mode_files(opts)
@@ -326,12 +387,11 @@ M.mode_browser = function(opts)
             M.mode_creation(opts)
         end, exec_silent = true, field_index = false },
     }
-
-    if M.cmd_get_num_files(opts.cwd, true) > 0 then
-        fzf_lua.fzf_exec(M.cmd_get_dir(opts), opts)
+    if M.cmd_get_num_files(opts) > 0 then
+        fzf_lua.fzf_exec(M.cmd_get_files_and_dir(opts), opts)
     else
         opts.dir_empty = true
-        fzf_lua.fzf_exec({ "No Dirs Here. Go Back?" }, opts)
+        fzf_lua.fzf_exec({ "Empty Directory. Go Back?" }, opts)
     end
 end
 
@@ -364,7 +424,7 @@ M.mode_combi = function(opts)
     setmetatable(M.userset_override, { __index = fzf_lua.config.globals })
     if opts.last_mode == "files" then
         M.mode_files(M.userset_override)
-    elseif opts.last_mode == "dir" then
+    elseif opts.last_mode == "browser" then
         M.mode_browser(M.userset_override)
     elseif opts.last_mode == "grep" then
         M.mode_grep(M.userset_override)
