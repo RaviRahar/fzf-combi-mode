@@ -168,6 +168,8 @@ M.edit_prompt_dir_mode = function(prompt, mode)
         prompt = prompt:match("^%Files: ") and prompt or "Files: " .. prompt
     elseif mode == "creation" then
         prompt = prompt:match("^%New: ") and prompt or "New: " .. prompt
+    elseif mode == "deletion" then
+        prompt = prompt:match("^%Delete: ") and prompt or "Delete: " .. prompt
     elseif mode == "grep" then
         prompt = prompt:match("^%Regex: ") and prompt or "Regex: " .. prompt
     end
@@ -256,7 +258,7 @@ M.mode_creation = function(opts)
         [M.parent_dir_key] = { fn = function()
             local parent_dir_path = fzf_lua.path.parent(opts.cwd)
             opts.cwd = parent_dir_path
-            M.mode_creation(opts)
+            opts.mode_previous(opts)
         end, exec_silent = true, field_index = false },
         ['default'] = { fn = function()
             opts.is_creation_dir = nil
@@ -286,6 +288,29 @@ M.mode_creation = function(opts)
         opts = M.set_legend(opts, "Enter File Name. Then Press Enter. Backspace to go to Browser.")
         fzf_lua.fzf_exec({}, opts)
     end
+end
+
+M.mode_deletion = function(opts, selected)
+    opts = type(opts) == "table" and opts or {}
+    opts.cwd = opts.cwd or vim.uv.cwd()
+    opts.prompt = M.edit_prompt_dir_mode(opts.cwd, "deletion")
+    local selected_query = selected[1]
+    local entity_name = fzf_lua.path.entry_to_file(selected_query).path
+    local entiry_path = fzf_lua.path.join({ opts.cwd, entity_name })
+    opts.actions = {
+        [M.parent_dir_key] = { fn = function()
+            opts.mode_previous(opts)
+        end, exec_silent = true, field_index = false },
+        ['default'] = { fn = function()
+            opts.mode_previous(opts)
+        end, field_index = false },
+        ['return'] = { fn = function()
+            os.execute(string.format("rm -rf %s &>/dev/null", entiry_path))
+            opts.mode_previous(opts)
+        end, field_index = true },
+    }
+    opts = M.set_legend(opts, string.format("DELETE %s ? Press Enter(Yes)/Backspace(No).", entiry_path))
+    fzf_lua.fzf_exec({}, opts)
 end
 
 M.mode_browser = function(opts)
@@ -326,29 +351,6 @@ M.mode_browser = function(opts)
                 M.mode_browser(opts)
             end
         end, field_index = false },
-        [M.dir_keys.toggle_hidden_key] = { fn = function()
-            opts.include_hidden = not opts.include_hidden
-            M.mode_browser(opts)
-        end, exec_silent = true, field_index = false },
-        [M.dir_keys.toggle_files_key] = { fn = function()
-            opts.include_files = not opts.include_files
-            M.mode_browser(opts)
-        end, exec_silent = true, field_index = false },
-        [M.dir_keys.toggle_cycle_key] = { fn = function()
-            if opts.include_hidden and opts.include_files then
-                opts.include_hidden = false
-                opts.include_files = false
-                M.mode_browser(opts)
-            elseif opts.include_hidden or opts.include_files then
-                opts.include_hidden = true
-                opts.include_files = true
-                M.mode_browser(opts)
-            else
-                opts.include_hidden = false
-                opts.include_files = true
-                M.mode_browser(opts)
-            end
-        end, exec_silent = true, field_index = false },
         ['return'] = function(selected)
             local selected_query = selected[1]
             if opts.dir_empty then
@@ -378,6 +380,29 @@ M.mode_browser = function(opts)
             opts.prompt = nil
             M.mode_files(opts)
         end, exec_silent = true, field_index = false },
+        [M.dir_keys.toggle_hidden_key] = { fn = function()
+            opts.include_hidden = not opts.include_hidden
+            M.mode_browser(opts)
+        end, exec_silent = true, field_index = false },
+        [M.dir_keys.toggle_files_key] = { fn = function()
+            opts.include_files = not opts.include_files
+            M.mode_browser(opts)
+        end, exec_silent = true, field_index = false },
+        [M.dir_keys.toggle_cycle_key] = { fn = function()
+            if opts.include_hidden and opts.include_files then
+                opts.include_hidden = false
+                opts.include_files = false
+                M.mode_browser(opts)
+            elseif opts.include_hidden or opts.include_files then
+                opts.include_hidden = true
+                opts.include_files = true
+                M.mode_browser(opts)
+            else
+                opts.include_hidden = false
+                opts.include_files = true
+                M.mode_browser(opts)
+            end
+        end, exec_silent = true, field_index = false },
         [M.dir_keys.new_file_key] = { fn = function()
             opts.is_creation_dir = false
             M.mode_creation(opts)
@@ -386,6 +411,9 @@ M.mode_browser = function(opts)
             opts.is_creation_dir = true
             M.mode_creation(opts)
         end, exec_silent = true, field_index = false },
+        [M.dir_keys.delete_key] = function(selected)
+            M.mode_deletion(opts, selected)
+        end,
     }
     if M.cmd_get_num_files(opts) > 0 then
         fzf_lua.fzf_exec(M.cmd_get_files_and_dir(opts), opts)
