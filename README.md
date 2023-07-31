@@ -3,11 +3,11 @@
 ![fzf-combi-mode-gif](https://raw.githubusercontent.com/wiki/RaviRahar/fzf-combi-mode/fzf-combi-mode.gif)
 
 This plugin provides combi mode for [**FzfLua**](https://github.com/ibhagwan/fzf-lua). It just combines different
-already existing modes and a new dir mode, making them work coherently.
+already existing modes and a new browser mode, making them work coherently.
 
 - Combi mode combines 3 modes together:
 
-  - dir: dir (custom)
+  - browser: browser (custom)
   - grep: live_grep_native (default)
   - files: files (default)
 
@@ -48,7 +48,7 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 ### Quick-Start
 
 ```vim
-:FzfCombiMode resume=true mode=dir
+:FzfCombiMode resume=true mode=browser
 ```
 
 or
@@ -64,6 +64,8 @@ Some default keybindings:
 
 - \<C-f\> : cycle between modes
 - \<BS\> : Act as normal backspace, but if query is empty then go back in path
+- \<C-t\> : cycle in submodes of browser mode (toggles files or hidden, by
+  default only non-hidden directories are shown)
 
 ### Configuration
 
@@ -75,10 +77,18 @@ require("fzf-combi-mode").setup({
     resume = true,
     keys = {
         grep_key = "ctrl-g",
-        dir_key = "ctrl-i",
+        browser_key = "ctrl-i",
         files_key = "ctrl-b",
         cycle_key = "ctrl-f",
         parent_dir_key = "ctrl-h",
+        browser_keys = {
+            toggle_hidden_key = "ctrl-z",
+            toggle_files_key = "ctrl-y",
+            toggle_cycle_key = "ctrl-t",
+            new_file_key = "ctrl-e",
+            new_dir_key = "ctrl-w",
+            delete_key = "ctrl-x",
+        }
     }
 })
 ```
