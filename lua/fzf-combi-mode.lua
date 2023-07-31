@@ -145,7 +145,7 @@ end
 M.set_legend = function(opts, legend)
     opts = type(opts) == "table" and opts or {}
     opts.fzf_opts = type(opts.fzf_opts) == "table" and opts.fzf_opts or {}
-    opts.fzf_opts["--header"] = vim.fn.shellescape(string.format(":: %s", legend))
+    opts.fzf_opts["--header"] = vim.fn.shellescape(string.format("%s", legend))
     return opts
 end
 
@@ -156,22 +156,19 @@ M.remove_legend = function(opts)
     return opts
 end
 
-M.edit_prompt_dir_mode = function(prompt, mode)
+M.edit_prompt_dir_mode = function(mode)
     -- prefix all mode_dir prompts with Dir:
-    prompt = fzf_lua.path.HOME_to_tilde(prompt)
-    if (#prompt >= 32) then
-        prompt = fzf_lua.path.shorten(prompt)
-    end
+    local prompt
     if mode == "browser" then
-        prompt = prompt:match("^%Browser: ") and prompt or "Browser: " .. prompt
+        prompt = "Browser: "
     elseif mode == "files" then
-        prompt = prompt:match("^%Files: ") and prompt or "Files: " .. prompt
+        prompt = "Files: "
     elseif mode == "creation" then
-        prompt = prompt:match("^%New: ") and prompt or "New: " .. prompt
+        prompt = "New: "
     elseif mode == "deletion" then
-        prompt = prompt:match("^%Delete: ") and prompt or "Delete: " .. prompt
+        prompt = "Delete: "
     elseif mode == "grep" then
-        prompt = prompt:match("^%Regex: ") and prompt or "Regex: " .. prompt
+        prompt = "Find Word: "
     end
     prompt = prompt .. " > "
     return prompt
@@ -180,13 +177,17 @@ end
 M.mode_files = function(opts)
     opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.uv.cwd()
-    opts.fn_transform = nil
-    opts = M.remove_legend(opts)
+    if opts.__call_opts then opts.__call_opts = nil end
     if opts.resume == true then
         M._is_resuming = true
         opts.last_mode = "files"
         M._resume_data = opts
     end
+    local mode_files_legend = ":: Dir: " .. opts.cwd
+    opts = M.set_legend(opts, mode_files_legend)
+    opts.fn_transform = nil
+    opts.cwd_prompt = false
+    opts.prompt = M.edit_prompt_dir_mode("files")
     opts.mode_previous = M.mode_files
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
@@ -219,15 +220,18 @@ end
 M.mode_grep = function(opts)
     opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.uv.cwd()
-    opts.exec_empty_query = true
-    opts.fn_transform = nil
-    opts = M.remove_legend(opts)
+    if opts.__call_opts then opts.__call_opts = nil end
     if opts.resume == true then
         M._is_resuming = true
         opts.last_mode = "grep"
         M._resume_data = opts
     end
+    local mode_grep_legend = ":: Dir: " .. opts.cwd
+    opts = M.set_legend(opts, mode_grep_legend)
+    opts.fn_transform = nil
+    opts.exec_empty_query = true
     opts.mode_previous = M.mode_grep
+    opts.prompt = M.edit_prompt_dir_mode("grep")
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
             local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -252,7 +256,8 @@ end
 M.mode_creation = function(opts)
     opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.uv.cwd()
-    opts.prompt = M.edit_prompt_dir_mode(opts.cwd, "creation")
+    if opts.__call_opts then opts.__call_opts = nil end
+    opts.prompt = M.edit_prompt_dir_mode("creation")
     opts.is_creation_dir = (opts.is_creation_dir ~= nil) and opts.is_creation_dir or false
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
@@ -281,22 +286,30 @@ M.mode_creation = function(opts)
         end, field_index = true },
     }
 
+    local mode_creation_legend = ":: Dir: " .. opts.cwd
     if opts.is_creation_dir then
-        opts = M.set_legend(opts, "Enter Directory Name. Then Press Enter. Backspace to go to Browser.")
-        fzf_lua.fzf_exec({}, opts)
+        mode_creation_legend = mode_creation_legend ..
+            string.format("\n:: Enter Directory Name. Then Press Enter. Backspace to go to Browser.")
     else
-        opts = M.set_legend(opts, "Enter File Name. Then Press Enter. Backspace to go to Browser.")
-        fzf_lua.fzf_exec({}, opts)
+        mode_creation_legend = mode_creation_legend ..
+            string.format("\n:: Enter File Name. Then Press Enter. Backspace to go to Browser.")
     end
+    opts = M.set_legend(opts, mode_creation_legend)
+    fzf_lua.fzf_exec({}, opts)
 end
 
 M.mode_deletion = function(opts, selected)
     opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.uv.cwd()
-    opts.prompt = M.edit_prompt_dir_mode(opts.cwd, "deletion")
+    if opts.__call_opts then opts.__call_opts = nil end
+    opts.prompt = M.edit_prompt_dir_mode("deletion")
     local selected_query = selected[1]
     local entity_name = fzf_lua.path.entry_to_file(selected_query).path
     local entiry_path = fzf_lua.path.join({ opts.cwd, entity_name })
+    local mode_deletion_legend = ":: Dir: " .. opts.cwd
+    mode_deletion_legend = mode_deletion_legend ..
+        string.format("\n:: DELETE %s ? Press Enter(Yes)/Backspace(No).", entiry_path)
+    opts = M.set_legend(opts, mode_deletion_legend)
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
             opts.mode_previous(opts)
@@ -309,19 +322,16 @@ M.mode_deletion = function(opts, selected)
             opts.mode_previous(opts)
         end, field_index = true },
     }
-    opts = M.set_legend(opts, string.format("DELETE %s ? Press Enter(Yes)/Backspace(No).", entiry_path))
     fzf_lua.fzf_exec({}, opts)
 end
 
 M.mode_browser = function(opts)
     opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.uv.cwd()
+    if opts.__call_opts then opts.__call_opts = nil end
     -- opts.fn_transform = function(file_name)
     --     return fzf_lua.make_entry.file(file_name, { file_icons = true, color_icons = true })
     -- end
-    opts.prompt = M.edit_prompt_dir_mode(opts.cwd, "browser")
-    opts.dir_empty = false
-    opts = M.remove_legend(opts)
     if opts.resume == true then
         M._is_resuming = true
         opts.last_mode = "browser"
@@ -329,14 +339,17 @@ M.mode_browser = function(opts)
     end
     opts.include_hidden = (function() if (opts.include_hidden ~= nil) then return opts.include_hidden else return false end end)()
     opts.include_files = (function() if (opts.include_files ~= nil) then return opts.include_files else return true end end)()
-    local file_hidden_prompt = "Showing Directories"
+    opts.dir_empty = false
+    opts.prompt = M.edit_prompt_dir_mode("browser")
+    local browser_mode_legend = ":: Dir: " .. opts.cwd
+    browser_mode_legend = browser_mode_legend .. "\n:: Showing Directories"
     if opts.include_files then
-        file_hidden_prompt = file_hidden_prompt .. " :: Showing Files"
+        browser_mode_legend = browser_mode_legend .. " :: Showing Files"
     end
     if opts.include_hidden then
-        file_hidden_prompt = file_hidden_prompt .. " :: Showing Hidden"
+        browser_mode_legend = browser_mode_legend .. " :: Showing Hidden"
     end
-    opts = M.set_legend(opts, file_hidden_prompt)
+    opts = M.set_legend(opts, browser_mode_legend)
     opts.mode_previous = M.mode_browser
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
@@ -449,7 +462,7 @@ M.mode_combi = function(opts)
 
     M.userset_override = opts
     -- override options by directly accessing through combi-mode
-    setmetatable(M.userset_override, { __index = fzf_lua.config.globals })
+    -- setmetatable(M.userset_override, { __index = fzf_lua.config.globals })
     if opts.last_mode == "files" then
         M.mode_files(M.userset_override)
     elseif opts.last_mode == "browser" then
