@@ -3,11 +3,11 @@
 -- traverse to parent directory with "backspace", "ctrl-h" (in all modes)
 --
 -- switch to files mode with files_key (current directory of fzf)
--- switch to grep mode with dir_key (current directory of dir)
--- switch to dir mode with grep_key, (current directory of fzf)
+-- switch to grep mode with grep_key (current directory of fzf)
+-- switch to browser mode with browser_key, (current directory of fzf)
 -- cycle between modes with cycle_key (current directory of fzf)
 --
--- dir_mode: fuzzy find among directories, <CR> to go inside
+-- browser_mode: fuzzy find among directories, <CR> to go inside or open a file
 --
 -- resume from where you left off: same mode, same dir
 -- or start a new session from current dir
@@ -32,11 +32,11 @@ M.defaults = {
     default = "browser",
 
     grep_key = "ctrl-g",
-    dir_key = "ctrl-i",
+    browser_key = "ctrl-o",
     files_key = "ctrl-k",
     cycle_key = "ctrl-f",
     parent_dir_key = "ctrl-h",
-    dir_keys = {
+    browser_keys = {
         toggle_hidden_key = "ctrl-z",
         toggle_files_key = "ctrl-y",
         toggle_cycle_key = "ctrl-t",
@@ -203,14 +203,14 @@ M.mode_files = function(opts)
             end
         end, field_index = false },
         ['return'] = fzf_lua.actions.file_edit_or_qf,
-        [M.dir_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
+        [M.browser_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
         [M.grep_key] = { fn = function() M.mode_grep(opts) end, exec_silent = true, field_index = false },
         [M.cycle_key] = { fn = function() M.mode_grep(opts) end, exec_silent = true, field_index = false },
-        [M.dir_keys.new_file_key] = { fn = function()
+        [M.browser_keys.new_file_key] = { fn = function()
             opts.is_creation_dir = false
             M.mode_creation(opts)
         end, exec_silent = true, field_index = false },
-        [M.dir_keys.new_dir_key] = { fn = function()
+        [M.browser_keys.new_dir_key] = { fn = function()
             opts.is_creation_dir = true
             M.mode_creation(opts)
         end, exec_silent = true, field_index = false },
@@ -246,7 +246,7 @@ M.mode_grep = function(opts)
             end
         end, field_index = false },
         ['return'] = fzf_lua.actions.file_edit_or_qf,
-        [M.dir_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
+        [M.browser_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
         [M.files_key] = { fn = function() M.mode_files(opts) end, exec_silent = true, field_index = false },
         [M.cycle_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
     }
@@ -393,15 +393,15 @@ M.mode_browser = function(opts)
             opts.prompt = nil
             M.mode_files(opts)
         end, exec_silent = true, field_index = false },
-        [M.dir_keys.toggle_hidden_key] = { fn = function()
+        [M.browser_keys.toggle_hidden_key] = { fn = function()
             opts.include_hidden = not opts.include_hidden
             M.mode_browser(opts)
         end, exec_silent = true, field_index = false },
-        [M.dir_keys.toggle_files_key] = { fn = function()
+        [M.browser_keys.toggle_files_key] = { fn = function()
             opts.include_files = not opts.include_files
             M.mode_browser(opts)
         end, exec_silent = true, field_index = false },
-        [M.dir_keys.toggle_cycle_key] = { fn = function()
+        [M.browser_keys.toggle_cycle_key] = { fn = function()
             if opts.include_hidden and opts.include_files then
                 opts.include_hidden = false
                 opts.include_files = false
@@ -416,15 +416,15 @@ M.mode_browser = function(opts)
                 M.mode_browser(opts)
             end
         end, exec_silent = true, field_index = false },
-        [M.dir_keys.new_file_key] = { fn = function()
+        [M.browser_keys.new_file_key] = { fn = function()
             opts.is_creation_dir = false
             M.mode_creation(opts)
         end, exec_silent = true, field_index = false },
-        [M.dir_keys.new_dir_key] = { fn = function()
+        [M.browser_keys.new_dir_key] = { fn = function()
             opts.is_creation_dir = true
             M.mode_creation(opts)
         end, exec_silent = true, field_index = false },
-        [M.dir_keys.delete_key] = function(selected)
+        [M.browser_keys.delete_key] = function(selected)
             M.mode_deletion(opts, selected)
         end,
     }
