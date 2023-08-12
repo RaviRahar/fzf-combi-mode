@@ -40,6 +40,7 @@ M.defaults = {
         toggle_hidden_key = "ctrl-z",
         toggle_files_key = "ctrl-y",
         toggle_cycle_key = "ctrl-t",
+        goto_path_key = "ctrl-l",
         new_file_key = "ctrl-e",
         new_dir_key = "ctrl-w",
         rename_key = "ctrl-r",
@@ -163,6 +164,8 @@ M.edit_prompt_dir_mode = function(mode)
         prompt = "Browser: "
     elseif mode == "files" then
         prompt = "Files: "
+    elseif mode == "goto" then
+        prompt = "Go To: "
     elseif mode == "creation" then
         prompt = "New: "
     elseif mode == "deletion" then
@@ -214,6 +217,12 @@ M.mode_files = function(opts)
             opts.is_creation_dir = true
             M.mode_creation(opts)
         end, exec_silent = true, field_index = false },
+        [M.browser_keys.delete_key] = function(selected)
+            M.mode_deletion(opts, selected)
+        end,
+        [M.browser_keys.goto_path_key] = { fn = function()
+            M.mode_goto_path(opts)
+        end, exec_silent = true, field_index = false },
     }
     fzf_lua.files(opts)
 end
@@ -245,13 +254,54 @@ M.mode_grep = function(opts)
                 M.mode_grep(opts)
             end
         end, field_index = false },
-        ['return'] = fzf_lua.actions.file_edit_or_qf,
+        ['return'] = fzf_lua.actions.file_edit,
         [M.browser_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
         [M.files_key] = { fn = function() M.mode_files(opts) end, exec_silent = true, field_index = false },
         [M.cycle_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
     }
     fzf_lua.live_grep_native(opts)
 end
+
+M.mode_goto_path = function(opts)
+    opts = type(opts) == "table" and opts or {}
+    opts.cwd = opts.cwd or vim.uv.cwd()
+    if opts.__call_opts then opts.__call_opts = nil end
+    opts.prompt = M.edit_prompt_dir_mode("goto")
+    opts.actions = {
+        [M.parent_dir_key] = { fn = function()
+            local parent_dir_path = fzf_lua.path.parent(opts.cwd)
+            opts.cwd = parent_dir_path
+            opts.mode_previous(opts)
+        end, exec_silent = true, field_index = false },
+        ['default'] = { fn = function()
+            opts.is_creation_dir = nil
+            opts.mode_previous(opts)
+        end, field_index = false },
+        ['return'] = { fn = function()
+            local entity_name = fzf_lua.get_last_query()
+            entity_name = fzf_lua.path.tilde_to_HOME(entity_name)
+            if entity_name ~= "" then
+                if (vim.fn.isdirectory(entity_name) ~= 0) then
+                    opts.cwd = entity_name
+                end
+                if (vim.fn.filereadable(entity_name) ~= 0) then
+                    local file_name = fzf_lua.path.basename(entity_name)
+                    local file_path = fzf_lua.path.parent(entity_name)
+                    opts.cwd = file_path
+                    fzf_lua.actions.file_edit({ file_name }, opts)
+                else
+                    opts.mode_previous(opts)
+                end
+            end
+        end, field_index = false },
+    }
+    local mode_goto_legend = ":: Dir: " .. opts.cwd
+    mode_goto_legend = mode_goto_legend ..
+        string.format("\n:: Enter File or Directory Path.")
+    opts = M.set_legend(opts, mode_goto_legend)
+    fzf_lua.fzf_exec({}, opts)
+end
+
 
 M.mode_creation = function(opts)
     opts = type(opts) == "table" and opts or {}
@@ -272,17 +322,16 @@ M.mode_creation = function(opts)
         ['return'] = { fn = function()
             local new_entity_name = fzf_lua.get_last_query()
 
-            if new_entity_name ~= nil then
+            if new_entity_name ~= "" then
                 if opts.is_creation_dir then
                     os.execute(string.format("mkdir -p %s", fzf_lua.path.join({ opts.cwd, new_entity_name })))
                 else
                     os.execute(string.format(">> %s", fzf_lua.path.join({ opts.cwd, new_entity_name })))
                 end
                 opts.is_creation_dir = nil
-                opts.mode_previous(opts)
-            else
-                M.mode_creation(opts)
             end
+
+            opts.mode_previous(opts)
         end, field_index = true },
     }
 
@@ -371,10 +420,10 @@ M.mode_browser = function(opts)
                 opts.cwd = parent_dir_path
                 M.mode_browser(opts)
             else
-                local cur_path = fzf_lua.path.entry_to_file(selected_query).path
-                local next_path = fzf_lua.path.join({ opts.cwd, cur_path })
+                local entity_name = fzf_lua.path.entry_to_file(selected_query).path
+                local next_path = fzf_lua.path.join({ opts.cwd, entity_name })
                 if (vim.fn.isdirectory(next_path) == 0) then
-                    fzf_lua.actions.file_edit_or_qf(selected, opts)
+                    fzf_lua.actions.file_edit(selected, opts)
                 else
                     opts.cwd = next_path
                     M.mode_browser(opts)
@@ -427,6 +476,9 @@ M.mode_browser = function(opts)
         [M.browser_keys.delete_key] = function(selected)
             M.mode_deletion(opts, selected)
         end,
+        [M.browser_keys.goto_path_key] = { fn = function()
+            M.mode_goto_path(opts)
+        end, exec_silent = true, field_index = false },
     }
     if M.cmd_get_num_files(opts) > 0 then
         fzf_lua.fzf_exec(M.cmd_get_files_and_dir(opts), opts)
