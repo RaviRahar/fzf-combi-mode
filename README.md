@@ -85,6 +85,7 @@ require("fzf-combi-mode").setup({
             toggle_hidden_key = "ctrl-z",
             toggle_files_key = "ctrl-y",
             toggle_cycle_key = "ctrl-t",
+            goto_path_key = "ctrl-l",
             new_file_key = "ctrl-e",
             new_dir_key = "ctrl-w",
             delete_key = "ctrl-x",
