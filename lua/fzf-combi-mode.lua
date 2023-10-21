@@ -179,7 +179,7 @@ end
 
 M.mode_files = function(opts)
     opts = type(opts) == "table" and opts or {}
-    opts.cwd = opts.cwd or vim.uv.cwd()
+    opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
     if opts.resume == true then
         M._is_resuming = true
@@ -228,7 +228,7 @@ M.mode_files = function(opts)
 end
 M.mode_grep = function(opts)
     opts = type(opts) == "table" and opts or {}
-    opts.cwd = opts.cwd or vim.uv.cwd()
+    opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
     if opts.resume == true then
         M._is_resuming = true
@@ -264,7 +264,7 @@ end
 
 M.mode_goto_path = function(opts)
     opts = type(opts) == "table" and opts or {}
-    opts.cwd = opts.cwd or vim.uv.cwd()
+    opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
     opts.prompt = M.edit_prompt_dir_mode("goto")
     opts.actions = {
@@ -305,7 +305,7 @@ end
 
 M.mode_creation = function(opts)
     opts = type(opts) == "table" and opts or {}
-    opts.cwd = opts.cwd or vim.uv.cwd()
+    opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
     opts.prompt = M.edit_prompt_dir_mode("creation")
     opts.is_creation_dir = (opts.is_creation_dir ~= nil) and opts.is_creation_dir or false
@@ -349,7 +349,7 @@ end
 
 M.mode_deletion = function(opts, selected)
     opts = type(opts) == "table" and opts or {}
-    opts.cwd = opts.cwd or vim.uv.cwd()
+    opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
     opts.prompt = M.edit_prompt_dir_mode("deletion")
     local selected_query = selected[1]
@@ -376,7 +376,7 @@ end
 
 M.mode_browser = function(opts)
     opts = type(opts) == "table" and opts or {}
-    opts.cwd = opts.cwd or vim.uv.cwd()
+    opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
     -- opts.fn_transform = function(file_name)
     --     return fzf_lua.make_entry.file(file_name, { file_icons = true, color_icons = true })
