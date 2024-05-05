@@ -146,7 +146,7 @@ end
 M.set_legend = function(opts, legend)
     opts = type(opts) == "table" and opts or {}
     opts.fzf_opts = type(opts.fzf_opts) == "table" and opts.fzf_opts or {}
-    opts.fzf_opts["--header"] = vim.fn.shellescape(string.format("%s", legend))
+    opts.fzf_opts["--header"] = string.format("%s", legend)
     return opts
 end
 
