@@ -29,6 +29,7 @@ M.defaults = {
     _resume_data = {},
 
     resume = true,
+    change = false,
     default = "browser",
 
     grep_key = "ctrl-g",
@@ -508,21 +509,35 @@ M.mode_combi = function(opts)
         opts.resume = M.resume
     end
 
-    if opts.resume and M._is_resuming then
-        opts = M._resume_data
+    if opts.change == nil then
+        opts.change = M.change
     end
 
+    if opts.mode == nil then
+        opts.mode = M.default
+    end
+    opts.last_mode = opts.mode
+
+    if not opts.resume or not M._is_resuming then
     M.userset_override = opts
-    -- override options by directly accessing through combi-mode
+    else
+        M.userset_override = M._resume_data
+        if opts.change then
+            M.userset_override.last_mode = opts.mode
+        end
+    end
+
+    -- override options by directly accessing through fzf config
     -- setmetatable(M.userset_override, { __index = fzf_lua.config.globals })
-    if opts.last_mode == "files" then
+    mode = M.userset_override.last_mode
+    if mode == "files" then
         M.mode_files(M.userset_override)
-    elseif opts.last_mode == "browser" then
+    elseif mode == "browser" then
         M.mode_browser(M.userset_override)
-    elseif opts.last_mode == "grep" then
+    elseif mode == "grep" then
         M.mode_grep(M.userset_override)
     else
-        print(string.format("fzf-combi-mode: mode %s does not exist", M.userset_override.last_mode))
+        print(string.format("fzf-combi-mode: mode %s does not exist", mode))
     end
 end
 
@@ -555,6 +570,16 @@ function M.load_command(...)
             opts.resume = false
         end
     end
+
+    -- allow for change of mode to new mode supplied from last_mode on resume
+    if user_opts.change then
+        if user_opts.change:lower() == "true" then
+            opts.change = true
+        elseif user_opts.change:lower() == "false" then
+            opts.change = false
+        end
+    end
+
     if user_opts.mode then
         opts.mode = user_opts.mode
     end
