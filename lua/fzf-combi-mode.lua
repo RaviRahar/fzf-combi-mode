@@ -26,9 +26,9 @@ M.defaults = {
     -- used to check if plugin is resuming
     _is_resuming = false,
     _setup_done = false,
-    _resume_data = {},
+    _res_data = {},
 
-    resume = true,
+    res = true,
     change = false,
     default = "browser",
 
@@ -182,10 +182,10 @@ M.mode_files = function(opts)
     opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
-    if opts.resume == true then
+    if opts.res == true then
         M._is_resuming = true
         opts.last_mode = "files"
-        M._resume_data = opts
+        M._res_data = opts
     end
     local mode_files_legend = ":: Dir: " .. opts.cwd
     opts = M.set_legend(opts, mode_files_legend)
@@ -231,10 +231,10 @@ M.mode_grep = function(opts)
     opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
-    if opts.resume == true then
+    if opts.res == true then
         M._is_resuming = true
         opts.last_mode = "grep"
-        M._resume_data = opts
+        M._res_data = opts
     end
     local mode_grep_legend = ":: Dir: " .. opts.cwd
     opts = M.set_legend(opts, mode_grep_legend)
@@ -382,10 +382,10 @@ M.mode_browser = function(opts)
     -- opts.fn_transform = function(file_name)
     --     return fzf_lua.make_entry.file(file_name, { file_icons = true, color_icons = true })
     -- end
-    if opts.resume == true then
+    if opts.res == true then
         M._is_resuming = true
         opts.last_mode = "browser"
-        M._resume_data = opts
+        M._res_data = opts
     end
     opts.include_hidden = (function() if (opts.include_hidden ~= nil) then return opts.include_hidden else return false end end)()
     opts.include_files = (function() if (opts.include_files ~= nil) then return opts.include_files else return true end end)()
@@ -401,6 +401,7 @@ M.mode_browser = function(opts)
     end
     opts = M.set_legend(opts, browser_mode_legend)
     opts.mode_previous = M.mode_browser
+
     opts.actions = {
         [M.parent_dir_key] = { fn = function()
             local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -499,14 +500,8 @@ M.mode_combi = function(opts)
     -- for backspace functionality on empty query
     opts.keymap = { fzf = { ["backward-eof"] = "accept" } }
 
-    if opts.mode == nil then
-        opts.last_mode = M.default
-    else
-        opts.last_mode = opts.mode
-    end
-
-    if opts.resume == nil then
-        opts.resume = M.resume
+    if opts.res == nil then
+        opts.res = M.res
     end
 
     if opts.change == nil then
@@ -518,10 +513,10 @@ M.mode_combi = function(opts)
     end
     opts.last_mode = opts.mode
 
-    if not opts.resume or not M._is_resuming then
+    if not opts.res or not M._is_resuming then
     M.userset_override = opts
     else
-        M.userset_override = M._resume_data
+        M.userset_override = M._res_data
         if opts.change then
             M.userset_override.last_mode = opts.mode
         end
@@ -545,7 +540,7 @@ M.setup = function(opts)
     M.userset = type(opts) == "table" and opts or {}
     -- first check in userset if setting found
     -- __newmethod allows values in defaults values to be changed directly
-    -- For ex: instead of M.defaults.resume=false we can use M.resume=false=false
+    -- For ex: instead of M.defaults.res=false we can use M.res=false=false
     setmetatable(M, { __index = M.userset, __newindex = M.defaults })
     -- if not then check in defaults
     setmetatable(M.userset, { __index = M.defaults })
@@ -563,15 +558,15 @@ function M.load_command(...)
     end
 
     local opts = {}
-    if user_opts.resume then
-        if user_opts.resume:lower() == "true" then
-            opts.resume = true
-        elseif user_opts.resume:lower() == "false" then
-            opts.resume = false
+    if user_opts.res then
+        if user_opts.res:lower() == "true" then
+            opts.res = true
+        elseif user_opts.res:lower() == "false" then
+            opts.res = false
         end
     end
 
-    -- allow for change of mode to new mode supplied from last_mode on resume
+    -- allow for change of mode to new mode supplied from last_mode on res
     if user_opts.change then
         if user_opts.change:lower() == "true" then
             opts.change = true
@@ -581,7 +576,7 @@ function M.load_command(...)
     end
 
     if user_opts.mode then
-        opts.mode = user_opts.mode
+        opts.mode = user_opts.mode:lower()
     end
 
     M.mode_combi(opts)
