@@ -48,14 +48,14 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 ### Quick-Start
 
 ```vim
-:FzfCombiMode resume=true mode=browser
+:FzfCombiMode res=true mode=browser
 ```
 
 or
 
 ```lua
 local opts = { noremap = true, silent = true }
-vim.keymap.set("n", "<leader>ff", ":FzfCombiMode resume=true<CR>", opts)
+vim.keymap.set("n", "<leader>ff", ":FzfCombiMode res=true<CR>", opts)
 -- or
 -- vim.keymap.set("n", "<leader>ff", function() require("fzf-combi-mode").mode_combi() end, opts)
 ```
@@ -74,7 +74,7 @@ Some default keybindings:
 -- Only provide settings you want to change
 require("fzf-combi-mode").setup({
     default = "files",
-    resume = true,
+    res = true,
     keys = {
         grep_key = "ctrl-g",
         browser_key = "ctrl-i",
@@ -86,8 +86,8 @@ require("fzf-combi-mode").setup({
             toggle_files_key = "ctrl-y",
             toggle_cycle_key = "ctrl-t",
             goto_path_key = "ctrl-l",
-            new_file_key = "ctrl-e",
-            new_dir_key = "ctrl-w",
+            new_file_key = "ctrl-q",
+            new_dir_key = "ctrl-e",
             delete_key = "ctrl-x",
         }
     }
@@ -96,7 +96,7 @@ require("fzf-combi-mode").setup({
 
 - You can make two keybindings, one that always opens in current dir and another
   that resumes from where you left off. Both will work independently, i.e., state
-  for keybinding with resume=false will not be saved
+  for keybinding with res=false will not be saved
 
 ```lua
 local opts = { noremap = true, silent = true }
@@ -104,6 +104,6 @@ local opts = { noremap = true, silent = true }
 vim.keymap.set("n", "<leader>ff", function() require("fzf-combi-mode").mode_combi({ mode = "files" }) end, opts)
 -- keybinding that do not resume
 -- <leader>fh as in fzf_files here (in cwd), since it will not resume and will always open in cwd
-vim.keymap.set("n", "<leader>fh", function() require("fzf-combi-mode").mode_combi({ resume = false, mode = "files" }) end, opts)
-vim.keymap.set("n", "<leader>fg", function() require("fzf-combi-mode").mode_combi({ resume = false, mode = "grep" }) end, opts)
+vim.keymap.set("n", "<leader>fh", function() require("fzf-combi-mode").mode_combi({ res = false, mode = "files" }) end, opts)
+vim.keymap.set("n", "<leader>fg", function() require("fzf-combi-mode").mode_combi({ res = false, mode = "grep" }) end, opts)
 ```
