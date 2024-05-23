@@ -178,14 +178,31 @@ M.edit_prompt_dir_mode = function(mode)
     return prompt
 end
 
+M.shallow_copy = function(copy, orig)
+    local orig_type = type(orig)
+    local copy_type = type(copy)
+    if orig_type == 'table' then
+        if #copy ~= 0 then
+            table.clear(copy)
+        end
+        for orig_key, orig_value in pairs(orig) do
+            copy[orig_key] = orig_value
+        end
+    else -- number, string, boolean, etc
+        copy = orig
+    end
+    -- return copy
+end
+
 M.mode_files = function(opts)
     opts = type(opts) == "table" and opts or {}
     opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
     if opts.res == true then
         M._is_resuming = true
+        opts.query = (opts.last_mode == "files") and fzf_lua.get_last_query() or nil 
         opts.last_mode = "files"
-        M._res_data = opts
+        M.shallow_copy(M._res_data, opts)
     end
     local mode_files_legend = ":: Dir: " .. opts.cwd
     opts = M.set_legend(opts, mode_files_legend)
@@ -233,8 +250,9 @@ M.mode_grep = function(opts)
     if opts.__call_opts then opts.__call_opts = nil end
     if opts.res == true then
         M._is_resuming = true
+        opts.query = (opts.last_mode == "grep") and fzf_lua.get_last_query() or nil
         opts.last_mode = "grep"
-        M._res_data = opts
+        M.shallow_copy(M._res_data, opts)
     end
     local mode_grep_legend = ":: Dir: " .. opts.cwd
     opts = M.set_legend(opts, mode_grep_legend)
@@ -384,8 +402,9 @@ M.mode_browser = function(opts)
     -- end
     if opts.res == true then
         M._is_resuming = true
+        opts.query = (opts.last_mode == "browser") and fzf_lua.get_last_query() or nil 
         opts.last_mode = "browser"
-        M._res_data = opts
+        M.shallow_copy(M._res_data, opts)
     end
     opts.include_hidden = (function() if (opts.include_hidden ~= nil) then return opts.include_hidden else return false end end)()
     opts.include_files = (function() if (opts.include_files ~= nil) then return opts.include_files else return true end end)()
