@@ -200,7 +200,7 @@ M.mode_files = function(opts)
     if opts.__call_opts then opts.__call_opts = nil end
     if opts.res == true then
         M._is_resuming = true
-        opts.query = (opts.last_mode == "files") and fzf_lua.get_last_query() or nil 
+        opts.query = (opts.last_mode == "files") and fzf_lua.get_last_query() or nil
         opts.last_mode = "files"
         M.shallow_copy(M._res_data, opts)
     end
@@ -211,36 +211,55 @@ M.mode_files = function(opts)
     opts.prompt = M.edit_prompt_dir_mode("files")
     opts.mode_previous = M.mode_files
     opts.actions = {
-        [M.parent_dir_key] = { fn = function()
-            local parent_dir_path = fzf_lua.path.parent(opts.cwd)
-            opts.cwd = parent_dir_path
-            M.mode_files(opts)
-        end, exec_silent = true, field_index = false },
-        ['default'] = { fn = function()
-            if #fzf_lua.get_last_query() == 0 then
+        [M.parent_dir_key] = {
+            fn = function()
                 local parent_dir_path = fzf_lua.path.parent(opts.cwd)
                 opts.cwd = parent_dir_path
                 M.mode_files(opts)
-            end
-        end, field_index = false },
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        ['default'] = {
+            fn = function()
+                if #fzf_lua.get_last_query() == 0 then
+                    local parent_dir_path = fzf_lua.path.parent(opts.cwd)
+                    opts.cwd = parent_dir_path
+                    M.mode_files(opts)
+                end
+            end,
+            field_index = false
+        },
         ['return'] = fzf_lua.actions.file_edit_or_qf,
         [M.browser_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
         [M.grep_key] = { fn = function() M.mode_grep(opts) end, exec_silent = true, field_index = false },
         [M.cycle_key] = { fn = function() M.mode_grep(opts) end, exec_silent = true, field_index = false },
-        [M.browser_keys.new_file_key] = { fn = function()
-            opts.is_creation_dir = false
-            M.mode_creation(opts)
-        end, exec_silent = true, field_index = false },
-        [M.browser_keys.new_dir_key] = { fn = function()
-            opts.is_creation_dir = true
-            M.mode_creation(opts)
-        end, exec_silent = true, field_index = false },
+        [M.browser_keys.new_file_key] = {
+            fn = function()
+                opts.is_creation_dir = false
+                M.mode_creation(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.browser_keys.new_dir_key] = {
+            fn = function()
+                opts.is_creation_dir = true
+                M.mode_creation(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
         [M.browser_keys.delete_key] = function(selected)
             M.mode_deletion(opts, selected)
         end,
-        [M.browser_keys.goto_path_key] = { fn = function()
-            M.mode_goto_path(opts)
-        end, exec_silent = true, field_index = false },
+        [M.browser_keys.goto_path_key] = {
+            fn = function()
+                M.mode_goto_path(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
     }
     fzf_lua.files(opts)
 end
@@ -261,18 +280,25 @@ M.mode_grep = function(opts)
     opts.mode_previous = M.mode_grep
     opts.prompt = M.edit_prompt_dir_mode("grep")
     opts.actions = {
-        [M.parent_dir_key] = { fn = function()
-            local parent_dir_path = fzf_lua.path.parent(opts.cwd)
-            opts.cwd = parent_dir_path
-            M.mode_grep(opts)
-        end, exec_silent = true, field_index = false },
-        ['default'] = { fn = function()
-            if #fzf_lua.get_last_query() == 0 then
+        [M.parent_dir_key] = {
+            fn = function()
                 local parent_dir_path = fzf_lua.path.parent(opts.cwd)
                 opts.cwd = parent_dir_path
                 M.mode_grep(opts)
-            end
-        end, field_index = false },
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        ['default'] = {
+            fn = function()
+                if #fzf_lua.get_last_query() == 0 then
+                    local parent_dir_path = fzf_lua.path.parent(opts.cwd)
+                    opts.cwd = parent_dir_path
+                    M.mode_grep(opts)
+                end
+            end,
+            field_index = false
+        },
         ['return'] = fzf_lua.actions.file_edit,
         [M.browser_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
         [M.files_key] = { fn = function() M.mode_files(opts) end, exec_silent = true, field_index = false },
@@ -287,32 +313,42 @@ M.mode_goto_path = function(opts)
     if opts.__call_opts then opts.__call_opts = nil end
     opts.prompt = M.edit_prompt_dir_mode("goto")
     opts.actions = {
-        [M.parent_dir_key] = { fn = function()
-            local parent_dir_path = fzf_lua.path.parent(opts.cwd)
-            opts.cwd = parent_dir_path
-            opts.mode_previous(opts)
-        end, exec_silent = true, field_index = false },
-        ['default'] = { fn = function()
-            opts.is_creation_dir = nil
-            opts.mode_previous(opts)
-        end, field_index = false },
-        ['return'] = { fn = function()
-            local entity_name = fzf_lua.get_last_query()
-            entity_name = fzf_lua.path.tilde_to_HOME(entity_name)
-            if entity_name ~= "" then
-                if (vim.fn.isdirectory(entity_name) ~= 0) then
-                    opts.cwd = entity_name
+        [M.parent_dir_key] = {
+            fn = function()
+                local parent_dir_path = fzf_lua.path.parent(opts.cwd)
+                opts.cwd = parent_dir_path
+                opts.mode_previous(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        ['default'] = {
+            fn = function()
+                opts.is_creation_dir = nil
+                opts.mode_previous(opts)
+            end,
+            field_index = false
+        },
+        ['return'] = {
+            fn = function()
+                local entity_name = fzf_lua.get_last_query()
+                entity_name = fzf_lua.path.tilde_to_HOME(entity_name)
+                if entity_name ~= "" then
+                    if (vim.fn.isdirectory(entity_name) ~= 0) then
+                        opts.cwd = entity_name
+                    end
+                    if (vim.fn.filereadable(entity_name) ~= 0) then
+                        local file_name = fzf_lua.path.basename(entity_name)
+                        local file_path = fzf_lua.path.parent(entity_name)
+                        opts.cwd = file_path
+                        fzf_lua.actions.file_edit({ file_name }, opts)
+                    else
+                        opts.mode_previous(opts)
+                    end
                 end
-                if (vim.fn.filereadable(entity_name) ~= 0) then
-                    local file_name = fzf_lua.path.basename(entity_name)
-                    local file_path = fzf_lua.path.parent(entity_name)
-                    opts.cwd = file_path
-                    fzf_lua.actions.file_edit({ file_name }, opts)
-                else
-                    opts.mode_previous(opts)
-                end
-            end
-        end, field_index = false },
+            end,
+            field_index = false
+        },
     }
     local mode_goto_legend = ":: Dir: " .. opts.cwd
     mode_goto_legend = mode_goto_legend ..
@@ -329,29 +365,39 @@ M.mode_creation = function(opts)
     opts.prompt = M.edit_prompt_dir_mode("creation")
     opts.is_creation_dir = (opts.is_creation_dir ~= nil) and opts.is_creation_dir or false
     opts.actions = {
-        [M.parent_dir_key] = { fn = function()
-            local parent_dir_path = fzf_lua.path.parent(opts.cwd)
-            opts.cwd = parent_dir_path
-            opts.mode_previous(opts)
-        end, exec_silent = true, field_index = false },
-        ['default'] = { fn = function()
-            opts.is_creation_dir = nil
-            opts.mode_previous(opts)
-        end, field_index = false },
-        ['return'] = { fn = function()
-            local new_entity_name = fzf_lua.get_last_query()
-
-            if new_entity_name ~= "" then
-                if opts.is_creation_dir then
-                    os.execute(string.format("mkdir -p %s", fzf_lua.path.join({ opts.cwd, new_entity_name })))
-                else
-                    os.execute(string.format(">> %s", fzf_lua.path.join({ opts.cwd, new_entity_name })))
-                end
+        [M.parent_dir_key] = {
+            fn = function()
+                local parent_dir_path = fzf_lua.path.parent(opts.cwd)
+                opts.cwd = parent_dir_path
+                opts.mode_previous(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        ['default'] = {
+            fn = function()
                 opts.is_creation_dir = nil
-            end
+                opts.mode_previous(opts)
+            end,
+            field_index = false
+        },
+        ['return'] = {
+            fn = function()
+                local new_entity_name = fzf_lua.get_last_query()
 
-            opts.mode_previous(opts)
-        end, field_index = true },
+                if new_entity_name ~= "" then
+                    if opts.is_creation_dir then
+                        os.execute(string.format("mkdir -p %s", fzf_lua.path.join({ opts.cwd, new_entity_name })))
+                    else
+                        os.execute(string.format(">> %s", fzf_lua.path.join({ opts.cwd, new_entity_name })))
+                    end
+                    opts.is_creation_dir = nil
+                end
+
+                opts.mode_previous(opts)
+            end,
+            field_index = true
+        },
     }
 
     local mode_creation_legend = ":: Dir: " .. opts.cwd
@@ -379,16 +425,26 @@ M.mode_deletion = function(opts, selected)
         string.format("\n:: DELETE %s ? Press Enter(Yes)/Backspace(No).", entiry_path)
     opts = M.set_legend(opts, mode_deletion_legend)
     opts.actions = {
-        [M.parent_dir_key] = { fn = function()
-            opts.mode_previous(opts)
-        end, exec_silent = true, field_index = false },
-        ['default'] = { fn = function()
-            opts.mode_previous(opts)
-        end, field_index = false },
-        ['return'] = { fn = function()
-            os.execute(string.format("rm -rf %s &>/dev/null", entiry_path))
-            opts.mode_previous(opts)
-        end, field_index = true },
+        [M.parent_dir_key] = {
+            fn = function()
+                opts.mode_previous(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        ['default'] = {
+            fn = function()
+                opts.mode_previous(opts)
+            end,
+            field_index = false
+        },
+        ['return'] = {
+            fn = function()
+                os.execute(string.format("rm -rf %s &>/dev/null", entiry_path))
+                opts.mode_previous(opts)
+            end,
+            field_index = true
+        },
     }
     fzf_lua.fzf_exec({}, opts)
 end
@@ -402,7 +458,7 @@ M.mode_browser = function(opts)
     -- end
     if opts.res == true then
         M._is_resuming = true
-        opts.query = (opts.last_mode == "browser") and fzf_lua.get_last_query() or nil 
+        opts.query = (opts.last_mode == "browser") and fzf_lua.get_last_query() or nil
         opts.last_mode = "browser"
         M.shallow_copy(M._res_data, opts)
     end
@@ -422,18 +478,25 @@ M.mode_browser = function(opts)
     opts.mode_previous = M.mode_browser
 
     opts.actions = {
-        [M.parent_dir_key] = { fn = function()
-            local parent_dir_path = fzf_lua.path.parent(opts.cwd)
-            opts.cwd = parent_dir_path
-            M.mode_browser(opts)
-        end, exec_silent = true, field_index = false },
-        ['default'] = { fn = function()
-            if #fzf_lua.get_last_query() == 0 then
+        [M.parent_dir_key] = {
+            fn = function()
                 local parent_dir_path = fzf_lua.path.parent(opts.cwd)
                 opts.cwd = parent_dir_path
                 M.mode_browser(opts)
-            end
-        end, field_index = false },
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        ['default'] = {
+            fn = function()
+                if #fzf_lua.get_last_query() == 0 then
+                    local parent_dir_path = fzf_lua.path.parent(opts.cwd)
+                    opts.cwd = parent_dir_path
+                    M.mode_browser(opts)
+                end
+            end,
+            field_index = false
+        },
         ['return'] = function(selected)
             local selected_query = selected[1]
             if opts.dir_empty then
@@ -451,55 +514,91 @@ M.mode_browser = function(opts)
                 end
             end
         end,
-        [M.files_key] = { fn = function()
-            opts.prompt = nil
-            M.mode_files(opts)
-        end, exec_silent = true, field_index = false },
-        [M.grep_key] = { fn = function()
-            opts.prompt = nil
-            M.mode_grep(opts)
-        end, exec_silent = true, field_index = false },
-        [M.cycle_key] = { fn = function()
-            opts.prompt = nil
-            M.mode_files(opts)
-        end, exec_silent = true, field_index = false },
-        [M.browser_keys.toggle_hidden_key] = { fn = function()
-            opts.include_hidden = not opts.include_hidden
-            M.mode_browser(opts)
-        end, exec_silent = true, field_index = false },
-        [M.browser_keys.toggle_files_key] = { fn = function()
-            opts.include_files = not opts.include_files
-            M.mode_browser(opts)
-        end, exec_silent = true, field_index = false },
-        [M.browser_keys.toggle_cycle_key] = { fn = function()
-            if opts.include_hidden and opts.include_files then
-                opts.include_hidden = false
-                opts.include_files = false
+        [M.files_key] = {
+            fn = function()
+                opts.prompt = nil
+                M.mode_files(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.grep_key] = {
+            fn = function()
+                opts.prompt = nil
+                M.mode_grep(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.cycle_key] = {
+            fn = function()
+                opts.prompt = nil
+                M.mode_files(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.browser_keys.toggle_hidden_key] = {
+            fn = function()
+                opts.include_hidden = not opts.include_hidden
                 M.mode_browser(opts)
-            elseif opts.include_hidden or opts.include_files then
-                opts.include_hidden = true
-                opts.include_files = true
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.browser_keys.toggle_files_key] = {
+            fn = function()
+                opts.include_files = not opts.include_files
                 M.mode_browser(opts)
-            else
-                opts.include_hidden = false
-                opts.include_files = true
-                M.mode_browser(opts)
-            end
-        end, exec_silent = true, field_index = false },
-        [M.browser_keys.new_file_key] = { fn = function()
-            opts.is_creation_dir = false
-            M.mode_creation(opts)
-        end, exec_silent = true, field_index = false },
-        [M.browser_keys.new_dir_key] = { fn = function()
-            opts.is_creation_dir = true
-            M.mode_creation(opts)
-        end, exec_silent = true, field_index = false },
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.browser_keys.toggle_cycle_key] = {
+            fn = function()
+                if opts.include_hidden and opts.include_files then
+                    opts.include_hidden = false
+                    opts.include_files = false
+                    M.mode_browser(opts)
+                elseif opts.include_hidden or opts.include_files then
+                    opts.include_hidden = true
+                    opts.include_files = true
+                    M.mode_browser(opts)
+                else
+                    opts.include_hidden = false
+                    opts.include_files = true
+                    M.mode_browser(opts)
+                end
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.browser_keys.new_file_key] = {
+            fn = function()
+                opts.is_creation_dir = false
+                M.mode_creation(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.browser_keys.new_dir_key] = {
+            fn = function()
+                opts.is_creation_dir = true
+                M.mode_creation(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
         [M.browser_keys.delete_key] = function(selected)
             M.mode_deletion(opts, selected)
         end,
-        [M.browser_keys.goto_path_key] = { fn = function()
-            M.mode_goto_path(opts)
-        end, exec_silent = true, field_index = false },
+        [M.browser_keys.goto_path_key] = {
+            fn = function()
+                M.mode_goto_path(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
     }
     if M.cmd_get_num_files(opts) > 0 then
         fzf_lua.fzf_exec(M.cmd_get_files_and_dir(opts), opts)
