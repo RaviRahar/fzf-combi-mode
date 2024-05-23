@@ -42,8 +42,8 @@ M.defaults = {
         toggle_files_key = "ctrl-y",
         toggle_cycle_key = "ctrl-t",
         goto_path_key = "ctrl-l",
-        new_file_key = "ctrl-e",
-        new_dir_key = "ctrl-w",
+        new_file_key = "ctrl-q",
+        new_dir_key = "ctrl-e",
         rename_key = "ctrl-r",
         select_key = "ctrl-s",
         move_key = "ctrl-m",
@@ -533,7 +533,7 @@ M.mode_combi = function(opts)
     opts.last_mode = opts.mode
 
     if not opts.res or not M._is_resuming then
-    M.userset_override = opts
+        M.userset_override = opts
     else
         M.userset_override = M._res_data
         if opts.change then
