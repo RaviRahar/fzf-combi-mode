@@ -220,7 +220,7 @@ M.mode_files = function(opts)
             exec_silent = true,
             field_index = false
         },
-        ['default'] = {
+        ['_back_eof'] = {
             fn = function()
                 if #fzf_lua.get_last_query() == 0 then
                     local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -289,7 +289,7 @@ M.mode_grep = function(opts)
             exec_silent = true,
             field_index = false
         },
-        ['default'] = {
+        ['_back_eof'] = {
             fn = function()
                 if #fzf_lua.get_last_query() == 0 then
                     local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -322,7 +322,7 @@ M.mode_goto_path = function(opts)
             exec_silent = true,
             field_index = false
         },
-        ['default'] = {
+        ['_back_eof'] = {
             fn = function()
                 if #fzf_lua.get_last_query() == 0 then
                     opts.is_creation_dir = nil
@@ -376,7 +376,7 @@ M.mode_creation = function(opts)
             exec_silent = true,
             field_index = false
         },
-        ['default'] = {
+        ['_back_eof'] = {
             fn = function()
                 if #fzf_lua.get_last_query() == 0 then
                     opts.is_creation_dir = nil
@@ -436,7 +436,7 @@ M.mode_deletion = function(opts, selected)
             exec_silent = true,
             field_index = false
         },
-        ['default'] = {
+        ['_back_eof'] = {
             fn = function()
                 if #fzf_lua.get_last_query() == 0 then
                     opts.mode_previous(opts)
@@ -493,7 +493,7 @@ M.mode_browser = function(opts)
             exec_silent = true,
             field_index = false
         },
-        ['default'] = {
+        ['_back_eof'] = {
             fn = function()
                 if #fzf_lua.get_last_query() == 0 then
                     local parent_dir_path = fzf_lua.path.parent(opts.cwd)
@@ -622,7 +622,7 @@ M.mode_combi = function(opts)
     opts = type(opts) == "table" and opts or {}
 
     -- for backspace functionality on empty query
-    opts.keymap = { fzf = { ["backward-eof"] = "accept" } }
+    opts.keymap = { fzf = { ["backward-eof"] = "print(_back_eof)+accept" } }
 
     if opts.res == nil then
         opts.res = M.res
