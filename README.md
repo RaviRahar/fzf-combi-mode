@@ -1,5 +1,7 @@
 ### Fzf Combi Mode
 
+**Note:** Use fzf >= 0.53 or downgrade fzf-combi-mode to [this](https://github.com/RaviRahar/fzf-combi-mode/commit/26908068545eec03db8e80e2b2269e42bbe23e86) commit.
+
 ![fzf-combi-mode-gif](https://raw.githubusercontent.com/wiki/RaviRahar/fzf-combi-mode/fzf-combi-mode.gif)
 
 This plugin provides combi mode for [**FzfLua**](https://github.com/ibhagwan/fzf-lua). It just combines different
