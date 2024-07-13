@@ -230,7 +230,7 @@ M.mode_files = function(opts)
             end,
             field_index = false
         },
-        ['return'] = fzf_lua.actions.file_edit_or_qf,
+        ['enter'] = fzf_lua.actions.file_edit_or_qf,
         [M.browser_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
         [M.grep_key] = { fn = function() M.mode_grep(opts) end, exec_silent = true, field_index = false },
         [M.cycle_key] = { fn = function() M.mode_grep(opts) end, exec_silent = true, field_index = false },
@@ -299,7 +299,7 @@ M.mode_grep = function(opts)
             end,
             field_index = false
         },
-        ['return'] = fzf_lua.actions.file_edit,
+        ['enter'] = fzf_lua.actions.file_edit,
         [M.browser_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
         [M.files_key] = { fn = function() M.mode_files(opts) end, exec_silent = true, field_index = false },
         [M.cycle_key] = { fn = function() M.mode_browser(opts) end, exec_silent = true, field_index = false },
@@ -324,12 +324,14 @@ M.mode_goto_path = function(opts)
         },
         ['default'] = {
             fn = function()
-                opts.is_creation_dir = nil
-                opts.mode_previous(opts)
+                if #fzf_lua.get_last_query() == 0 then
+                    opts.is_creation_dir = nil
+                    opts.mode_previous(opts)
+                end
             end,
             field_index = false
         },
-        ['return'] = {
+        ['enter'] = {
             fn = function()
                 local entity_name = fzf_lua.get_last_query()
                 entity_name = fzf_lua.path.tilde_to_HOME(entity_name)
@@ -376,12 +378,14 @@ M.mode_creation = function(opts)
         },
         ['default'] = {
             fn = function()
-                opts.is_creation_dir = nil
-                opts.mode_previous(opts)
+                if #fzf_lua.get_last_query() == 0 then
+                    opts.is_creation_dir = nil
+                    opts.mode_previous(opts)
+                end
             end,
             field_index = false
         },
-        ['return'] = {
+        ['enter'] = {
             fn = function()
                 local new_entity_name = fzf_lua.get_last_query()
 
@@ -434,11 +438,13 @@ M.mode_deletion = function(opts, selected)
         },
         ['default'] = {
             fn = function()
-                opts.mode_previous(opts)
+                if #fzf_lua.get_last_query() == 0 then
+                    opts.mode_previous(opts)
+                end
             end,
             field_index = false
         },
-        ['return'] = {
+        ['enter'] = {
             fn = function()
                 os.execute(string.format("rm -rf %s &>/dev/null", entiry_path))
                 opts.mode_previous(opts)
@@ -497,7 +503,7 @@ M.mode_browser = function(opts)
             end,
             field_index = false
         },
-        ['return'] = function(selected)
+        ['enter'] = function(selected)
             local selected_query = selected[1]
             if opts.dir_empty then
                 local parent_dir_path = fzf_lua.path.parent(opts.cwd)
