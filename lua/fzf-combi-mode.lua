@@ -199,8 +199,11 @@ M.mode_files = function(opts)
     opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
     if opts.res == true then
-        M._is_resuming = true
-        opts.query = (opts.last_mode == "files") and fzf_lua.get_last_query() or nil
+        if M._is_resuming then
+            opts.query = (opts.last_mode == "files") and fzf_lua.get_last_query() or nil
+        else
+            M._is_resuming = true
+        end
         opts.last_mode = "files"
         M.shallow_copy(M._res_data, opts)
     end
@@ -268,8 +271,11 @@ M.mode_grep = function(opts)
     opts.cwd = opts.cwd or vim.loop.cwd()
     if opts.__call_opts then opts.__call_opts = nil end
     if opts.res == true then
-        M._is_resuming = true
-        opts.query = (opts.last_mode == "grep") and fzf_lua.get_last_query() or nil
+        if M._is_resuming then
+            opts.query = (opts.last_mode == "grep") and fzf_lua.get_last_query() or nil
+        else
+            M._is_resuming = true
+        end
         opts.last_mode = "grep"
         M.shallow_copy(M._res_data, opts)
     end
@@ -463,8 +469,11 @@ M.mode_browser = function(opts)
     --     return fzf_lua.make_entry.file(file_name, { file_icons = true, color_icons = true })
     -- end
     if opts.res == true then
-        M._is_resuming = true
-        opts.query = (opts.last_mode == "browser") and fzf_lua.get_last_query() or nil
+        if M._is_resuming then
+            opts.query = (opts.last_mode == "browser") and fzf_lua.get_last_query() or nil
+        else
+            M._is_resuming = true
+        end
         opts.last_mode = "browser"
         M.shallow_copy(M._res_data, opts)
     end
@@ -648,7 +657,7 @@ M.mode_combi = function(opts)
 
     -- override options by directly accessing through fzf config
     -- setmetatable(M.userset_override, { __index = fzf_lua.config.globals })
-    mode = M.userset_override.last_mode
+    local mode = M.userset_override.last_mode
     if mode == "files" then
         M.mode_files(M.userset_override)
     elseif mode == "browser" then
@@ -664,7 +673,7 @@ M.setup = function(opts)
     M.userset = type(opts) == "table" and opts or {}
     -- first check in userset if setting found
     -- __newmethod allows values in defaults values to be changed directly
-    -- For ex: instead of M.defaults.res=false we can use M.res=false=false
+    -- For ex: instead of M.defaults.res=false we can use M.res=false
     setmetatable(M, { __index = M.userset, __newindex = M.defaults })
     -- if not then check in defaults
     setmetatable(M.userset, { __index = M.defaults })
