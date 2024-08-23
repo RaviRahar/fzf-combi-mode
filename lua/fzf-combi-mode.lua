@@ -37,6 +37,7 @@ M.defaults = {
     files_key = "ctrl-k",
     cycle_key = "ctrl-f",
     parent_dir_key = "ctrl-h",
+    reset_dir_key = "ctrl-p",
     browser_keys = {
         toggle_hidden_key = "ctrl-z",
         toggle_files_key = "ctrl-y",
@@ -223,6 +224,14 @@ M.mode_files = function(opts)
             exec_silent = true,
             field_index = false
         },
+        [M.reset_dir_key] = {
+            fn = function()
+                opts.cwd = vim.loop.cwd()
+                M.mode_files(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
         ['_back_eof'] = {
             fn = function()
                 if #fzf_lua.get_last_query() == 0 then
@@ -295,6 +304,15 @@ M.mode_grep = function(opts)
             exec_silent = true,
             field_index = false
         },
+        [M.reset_dir_key] = {
+            fn = function()
+                opts.cwd = vim.loop.cwd()
+                M.mode_grep(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+
         ['_back_eof'] = {
             fn = function()
                 if #fzf_lua.get_last_query() == 0 then
@@ -323,6 +341,14 @@ M.mode_goto_path = function(opts)
             fn = function()
                 local parent_dir_path = fzf_lua.path.parent(opts.cwd)
                 opts.cwd = parent_dir_path
+                opts.mode_previous(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.reset_dir_key] = {
+            fn = function()
+                opts.cwd = vim.loop.cwd()
                 opts.mode_previous(opts)
             end,
             exec_silent = true,
@@ -377,6 +403,14 @@ M.mode_creation = function(opts)
             fn = function()
                 local parent_dir_path = fzf_lua.path.parent(opts.cwd)
                 opts.cwd = parent_dir_path
+                opts.mode_previous(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.reset_dir_key] = {
+            fn = function()
+                opts.cwd = vim.loop.cwd()
                 opts.mode_previous(opts)
             end,
             exec_silent = true,
@@ -442,6 +476,14 @@ M.mode_deletion = function(opts, selected)
             exec_silent = true,
             field_index = false
         },
+        [M.reset_dir_key] = {
+            fn = function()
+                opts.cwd = vim.loop.cwd()
+                opts.mode_previous(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
         ['_back_eof'] = {
             fn = function()
                 if #fzf_lua.get_last_query() == 0 then
@@ -497,6 +539,14 @@ M.mode_browser = function(opts)
             fn = function()
                 local parent_dir_path = fzf_lua.path.parent(opts.cwd)
                 opts.cwd = parent_dir_path
+                M.mode_browser(opts)
+            end,
+            exec_silent = true,
+            field_index = false
+        },
+        [M.reset_dir_key] = {
+            fn = function()
+                opts.cwd = vim.loop.cwd()
                 M.mode_browser(opts)
             end,
             exec_silent = true,
