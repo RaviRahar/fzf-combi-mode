@@ -83,7 +83,7 @@ require("fzf-combi-mode").setup({
         files_key = "ctrl-b",
         cycle_key = "ctrl-f",
         parent_dir_key = "ctrl-h",
-        reset_dir_key = "ctrl-p",
+        reset_dir_key = "ctrl-i",
         browser_keys = {
             toggle_hidden_key = "ctrl-z",
             toggle_files_key = "ctrl-y",
