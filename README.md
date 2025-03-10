@@ -4,14 +4,38 @@
 
 https://github.com/user-attachments/assets/93c4e8db-ec57-4d40-9033-4a31559f2369
 
-This plugin provides combi mode for [**FzfLua**](https://github.com/ibhagwan/fzf-lua). It just combines different
-already existing modes and a new browser mode, making them work coherently.
+This plugin provides combi mode for [**FzfLua**](https://github.com/ibhagwan/fzf-lua).
+It combines a new browser mode with different existing modes, making them work
+coherently. This offers a workflow to navigate fuzzily through files and
+directories.
 
 - Combi mode combines 3 modes together:
 
-  - browser: browser (custom)
+  - browser: file browser (custom)
+      - create files
+      - create dirs
+      - delete files
+      - go to path
+      - toggle dirs only mode
+      - toggle hidden
+
   - grep: live_grep_native (default)
   - files: files (default)
+
+- Upcoming:
+
+  - [ ] Extend Browser Mode
+    - [ ] File Operations
+      - [ ] Rename: ctrl-r
+      - [ ] Select (Toggle): ctrl-s
+        - [ ] Move: ctrl-m
+        - [ ] Copy: ctrl-c
+        - [ ] Delete: ctrl-d
+      - [ ] Clear All Selections: ctrl-shift-s
+    - [ ] Bookmark Directories and files
+        - [ ] Bookmark(Toggle): ctrl-b
+        - [ ] Clear All Bookmarks : ctrl-shift-b
+        - [ ] files,grep: Search in bookmarked: ctrl-b
 
 ### Install
 
